@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mountain-pine-media.com/sitemap.xml
