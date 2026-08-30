@@ -144,6 +144,12 @@
       <div class="num mono">24–48<span style="font-size:16px;">HR</span></div>
       <div class="lbl">Edited gallery delivery on every listing — because your window to list is short.</div>
     </div>
+    <div class="scroll-cue" aria-hidden="true">
+      <span class="scroll-cue-text">Scroll Down for More</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 4v13"/><path d="M6 12l6 6 6-6"/>
+      </svg>
+    </div>
   </div>
 </section>
 
@@ -377,8 +383,10 @@
 <script>
   // Nav scroll effect
   const header = document.querySelector('header');
+  const scrollCue = document.querySelector('.scroll-cue');
   window.addEventListener('scroll', () => {
     header.classList.toggle('scrolled', window.scrollY > 60);
+    if (scrollCue) scrollCue.classList.toggle('is-hidden', window.scrollY > 24);
   });
 
   // Mobile hamburger toggle
