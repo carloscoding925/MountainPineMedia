@@ -384,7 +384,7 @@
   // Nav scroll effect
   const header = document.querySelector('header');
   const scrollCue = document.querySelector('.scroll-cue');
-  const CUE_FADE_AFTER = 200; // px of scroll before the hero cue fades out
+  const CUE_FADE_AFTER = 250; // px of scroll before the hero cue fades out
   window.addEventListener('scroll', () => {
     header.classList.toggle('scrolled', window.scrollY > 60);
     if (scrollCue) scrollCue.classList.toggle('is-hidden', window.scrollY > CUE_FADE_AFTER);
