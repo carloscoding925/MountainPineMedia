@@ -109,6 +109,17 @@ The service-area map is still a hand-drawn SVG with hardcoded city dots, not a m
 
 A centre-focus carousel of vertical listing films, sitting between **Recent Work** and **Why Mountain Pine** on the Pricing section's `#E4EDEC` ground. The focused film sits dead centre with its neighbours peeking either side, and the ends wrap around. Arrows, dots, arrow keys, and horizontal swipe all move it; only the focused film is playable, and clicking a neighbour pulls it into focus instead.
 
+### Swipe, and why it needs a capture layer
+
+Swipe listeners live on `.cine-track`, but a cross-origin iframe consumes the pointer events over it, and the focused film's iframe is deliberately `pointer-events:auto` so Vimeo can run its own controls. On desktop that costs nothing — the focused slide is 32% of the track, so there is open ground either side to start a gesture on. On a phone the focused slide is **72%** of the track and only the slivers of the peeking neighbours were live: measured 7 of 11 sample points across the track dead to the handler, which left the arrows as the only way to move.
+
+`.cine-swipe` is a transparent layer over the focused film, shown only under `@media(pointer:coarse)` so desktop behaviour is untouched. Its events bubble to the track, so one handler still serves both it and the open ground. Two details:
+
+- **It stops 46px short of the bottom.** Vimeo's control bar lives there and stays directly usable — the layer would otherwise swallow scrubbing and the overflow menu.
+- **It relays taps.** A tap that the layer intercepts would have reached the player, so the script forwards it as play/pause. Vimeo has no toggle method, so state is tracked in a `Map`, and the script subscribes to the player's own `play`/`pause` events over `postMessage` to stay honest when someone uses that exposed control bar.
+
+Navigation needs horizontal intent — more than 40px of travel *and* more horizontal than vertical — so a diagonal flick while scrolling past the section doesn't move the carousel.
+
 The films are **hosted on Vimeo, not self-hosted** — the same call Lake & Pine made, and here it is forced. Cloudflare Workers static assets cap an individual file at **25 MiB** on every plan, and the source films are 74–244 MB of 4K portrait footage. Getting them under that ceiling means transcoding to roughly 1080×1920 and giving up adaptive bitrate; Vimeo sidesteps the limit, keeps ~500 MB of video out of the repository, and serves an appropriate rendition per connection.
 
 ### Swapping in a film
@@ -152,6 +163,17 @@ Lake & Pine sizes its slides at 648px specifically because **Vimeo collapses its
 That button is hidden on iPhone — iOS Safari has never supported the Fullscreen API on arbitrary elements, and the `<video>` it would need lives inside Vimeo's cross-origin iframe. iPhone visitors use Vimeo's own control. macOS and iPad Safari are covered by the `webkit`-prefixed fallbacks in both the script and `styles.css`. If the browser refuses our fullscreen request outright, the code falls back to asking the Vimeo player to go fullscreen itself over `postMessage`.
 
 The lightbox tears its iframe down on close rather than after the fade, so audio stops the moment the film is dismissed.
+
+**Sizing is a vertical budget, not a free-for-all.** The close button sits in the top-right corner, absolutely positioned, and it is the *first* child — the player is positioned and comes later, so without an explicit `z-index` the video paints over it and swallows the tap. That is a real failure mode, not a theoretical one: on a 667px-tall screen the centred player rode up to 20px from the top and `elementFromPoint` over the button returned the Vimeo iframe.
+
+Two things keep it fixed, and both are needed:
+
+- `.cine-lb-close` carries `z-index:3`, so it wins if the two ever meet again.
+- `--lb-chrome` (164px, or 128px under `max-height:480px`) is the vertical space the player is *not* allowed to spend — the button's corner, the gap, the caption bar, the bottom padding. The player's width derives from what's left: `min(430px, 92vw, calc((100svh - var(--lb-chrome)) * 9 / 16))`. `svh` rather than `vh` so mobile browser chrome counts, with a `vh` line above as the fallback.
+
+That budget only works if the bar's height is predictable, so the caption is pinned to one line each with `text-overflow:ellipsis` — a wrapping title silently overflowed it before. To buy the caption room back, the `FULLSCREEN` button drops to its icon under 420px wide or 480px tall, and `syncFsLabel()` mirrors the label into an `aria-label` because `display:none` hides the span from screen readers too.
+
+Verified with the lightbox open at 390×844, 390×667, 360×640, 320×568, 844×390, 768×1024 and 1920×1080: no overlap, button hit-testable, caption bar on screen, player exactly 9:16. Desktop and iPad are untouched at 430×764.
 
 ## Image workflow
 
