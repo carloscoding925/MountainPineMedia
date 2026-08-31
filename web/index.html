@@ -247,6 +247,7 @@
               <button class="cine-expand" type="button" aria-label="Watch Agent Introduction larger">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
               </button>
+              <div class="cine-swipe" aria-hidden="true"></div>
             </div>
             <div class="cine-meta">
               <span class="cine-name">Crystal - Agent Feature</span>
@@ -259,6 +260,7 @@
               <button class="cine-expand" type="button" aria-label="Watch Family Move In larger">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
               </button>
+              <div class="cine-swipe" aria-hidden="true"></div>
             </div>
             <div class="cine-meta">
               <span class="cine-name">Family Move In</span>
@@ -271,6 +273,7 @@
               <button class="cine-expand" type="button" aria-label="Watch Daisy — Agent Introduction larger">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
               </button>
+              <div class="cine-swipe" aria-hidden="true"></div>
             </div>
             <div class="cine-meta">
               <span class="cine-name">Daisy — Agent Introduction</span>
@@ -283,6 +286,7 @@
               <button class="cine-expand" type="button" aria-label="Watch Listing Reel larger">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
               </button>
+              <div class="cine-swipe" aria-hidden="true"></div>
             </div>
             <div class="cine-meta">
               <span class="cine-name">Listing Reel</span>
@@ -555,13 +559,47 @@
     let activeIndex = featured === -1 ? Math.floor(count / 2) : featured;
     let placed = slides.map(() => 0);
 
-    function pauseSlide(slide) {
+    function post(slide, method, value) {
       const iframe = slide && slide.querySelector('iframe');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage(
-          JSON.stringify({ method: 'pause' }), 'https://player.vimeo.com');
-      }
+      if (!iframe || !iframe.contentWindow) return;
+      const msg = { method: method };
+      if (value !== undefined) msg.value = value;
+      iframe.contentWindow.postMessage(JSON.stringify(msg), 'https://player.vimeo.com');
     }
+
+    function pauseSlide(slide) {
+      post(slide, 'pause');
+      if (slide) playing.set(slide, false);
+    }
+
+    // The capture layer sits over the player, so a tap has to be relayed. Vimeo has no
+    // toggle method, so track state — and subscribe to the player's own events so the
+    // flag stays honest when someone uses the control bar we left exposed.
+    const playing = new Map();
+    function togglePlay(slide) {
+      const on = playing.get(slide) === true;
+      post(slide, on ? 'pause' : 'play');
+      playing.set(slide, !on);
+    }
+    slides.forEach((slide) => {
+      const frame = slide.querySelector('iframe');
+      if (!frame) return;
+      frame.addEventListener('load', () => {
+        post(slide, 'addEventListener', 'play');
+        post(slide, 'addEventListener', 'pause');
+      });
+    });
+    window.addEventListener('message', (e) => {
+      if (e.origin !== 'https://player.vimeo.com') return;
+      let data;
+      try { data = JSON.parse(e.data); } catch (_) { return; }
+      if (data.event !== 'play' && data.event !== 'pause') return;
+      const slide = slides.find((s) => {
+        const f = s.querySelector('iframe');
+        return f && f.contentWindow === e.source;
+      });
+      if (slide) playing.set(slide, data.event === 'play');
+    });
 
     // Signed distance from the active slide, taking the short way round the loop.
     function offsetOf(i) {
@@ -620,15 +658,30 @@
       }
     });
 
-    // Horizontal swipe — registers on the areas either side of the video iframes.
-    let swipeStart = null;
-    track.addEventListener('pointerdown', (e) => { swipeStart = e.clientX; });
-    track.addEventListener('pointercancel', () => { swipeStart = null; });
+    // Horizontal swipe. Events from the capture layer bubble to the track, so one
+    // handler serves both it and the open ground around the peeking neighbours.
+    let swipe = null;
+    track.addEventListener('pointerdown', (e) => {
+      swipe = {
+        id: e.pointerId, x: e.clientX, y: e.clientY,
+        onLayer: !!(e.target.classList && e.target.classList.contains('cine-swipe'))
+      };
+    });
+    track.addEventListener('pointercancel', () => { swipe = null; });
     track.addEventListener('pointerup', (e) => {
-      if (swipeStart === null) return;
-      const dx = e.clientX - swipeStart;
-      swipeStart = null;
-      if (Math.abs(dx) > 40) goTo(activeIndex + (dx < 0 ? 1 : -1));
+      if (!swipe || e.pointerId !== swipe.id) return;
+      const dx = e.clientX - swipe.x;
+      const dy = e.clientY - swipe.y;
+      const onLayer = swipe.onLayer;
+      swipe = null;
+      // Horizontal intent only — a diagonal flick while scrolling the page past the
+      // carousel shouldn't move it.
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        goTo(activeIndex + (dx < 0 ? 1 : -1));
+      } else if (onLayer && Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        // A tap the layer intercepted would otherwise have reached the player.
+        togglePlay(slides[activeIndex]);
+      }
     });
 
     // ---- Lightbox --------------------------------------------------------------

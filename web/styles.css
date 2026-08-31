@@ -254,6 +254,14 @@ section{padding:110px 0;}
   pointer-events:none;
 }
 .cine-slide.is-active .cine-thumb iframe{pointer-events:auto;}
+/* Touch only. The focused film's iframe is interactive so Vimeo can run its own
+   controls, which means a touch on it never reaches us — and on a phone that iframe
+   is ~72% of the track, so a swipe almost always began on dead ground and only the
+   arrows worked. This layer catches the gesture and the script forwards plain taps
+   to the player. The bottom strip is left uncovered so Vimeo's control bar stays
+   directly usable, and .cine-expand sits above at z-index 2. */
+.cine-swipe{position:absolute; inset:0 0 46px 0; z-index:1; display:none; touch-action:pan-y;}
+@media(pointer:coarse){.cine-slide.is-active .cine-swipe{display:block;}}
 .cine-slide:not(.is-active){cursor:pointer;}
 .cine-meta{
   margin-top:16px; display:flex; flex-direction:column; gap:3px; text-align:center;
