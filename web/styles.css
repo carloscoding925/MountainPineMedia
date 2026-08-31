@@ -211,6 +211,146 @@ section{padding:110px 0;}
 }
 .pf-tag .type{display:block; color:var(--brass); font-size:10px; text-transform:uppercase; letter-spacing:0.08em; margin-top:2px;}
 
+/* CINEMATOGRAPHY */
+.cinema{background:#E4EDEC;}
+.cine-carousel{position:relative; max-width:1040px; margin:0 auto;}
+.cine-track{
+  display:grid; grid-template-areas:"stack";
+  overflow:hidden; padding:16px 0 20px; touch-action:pan-y;
+  /* Softens the hard crop where the peeking neighbours meet the track edge. Kept
+     shallow so the sliver of each neighbour stays readable rather than washing out. */
+  --fade:5%;
+  -webkit-mask-image:linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+  mask-image:linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+}
+/* The films are 9:16, so width is capped three ways: an absolute ceiling, a share
+   of the track, and a share of the viewport height — the last one keeps a portrait
+   player from running off the bottom of a short laptop screen. */
+.cine-slide{
+  grid-area:stack; justify-self:center;
+  width:min(330px, 32%, 42vh);
+  display:flex; flex-direction:column;
+  transform:translateX(calc(var(--d, 0) * 100%)) scale(0.82);
+  opacity:0.4;
+  transition:transform .45s ease, opacity .45s ease;
+  will-change:transform;
+}
+.cine-slide.is-active{transform:translateX(0) scale(1); opacity:1; z-index:1;}
+/* A slide wrapping from one edge to the other is repositioned instantly and faded
+   back in, rather than sweeping across the whole carousel. */
+.cine-slide.is-teleport,
+.cine-track.is-init .cine-slide{transition:none;}
+.cine-slide.is-teleport{opacity:0;}
+.cine-thumb{
+  background:var(--lake-deep); aspect-ratio:9/16; position:relative;
+  border:1px solid var(--stone); border-radius:2px; overflow:hidden;
+  transition:box-shadow .4s ease;
+}
+.cine-slide.is-active .cine-thumb{box-shadow:0 22px 50px rgba(20,41,58,0.22);}
+.cine-thumb iframe{
+  width:100%; height:100%; border:0; display:block;
+  /* Only the focused film is playable. Letting the pointer through on the others
+     means a click lands on the slide instead, pulling it into focus. */
+  pointer-events:none;
+}
+.cine-slide.is-active .cine-thumb iframe{pointer-events:auto;}
+.cine-slide:not(.is-active){cursor:pointer;}
+.cine-meta{
+  margin-top:16px; display:flex; flex-direction:column; gap:3px; text-align:center;
+  /* Only the focused film is captioned — the neighbours are cropped by the track,
+     so their titles would otherwise be cut off mid-word. */
+  opacity:0; transition:opacity .45s ease;
+}
+.cine-slide.is-active .cine-meta{opacity:1;}
+.cine-name{font-family:'Fraunces',serif; font-size:18px; font-weight:600; color:var(--ink);}
+.cine-detail{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--brass);}
+.cine-arrow{
+  position:absolute; top:44%; transform:translateY(-50%);
+  width:44px; height:44px; border-radius:50%;
+  border:1px solid var(--lake-deep); background:var(--alpine-white); color:var(--lake-deep);
+  font-size:21px; line-height:1; cursor:pointer; z-index:2;
+  display:flex; align-items:center; justify-content:center;
+  transition:background .3s ease, color .3s ease;
+}
+.cine-arrow:hover{background:var(--lake-deep); color:var(--alpine-white);}
+.cine-arrow-prev{left:-8px;}
+.cine-arrow-next{right:-8px;}
+.cine-dots{display:flex; justify-content:center; gap:10px; margin-top:22px;}
+.cine-dot{
+  width:9px; height:9px; border-radius:50%; border:1px solid var(--brass);
+  background:transparent; padding:0; cursor:pointer; transition:background .3s ease;
+}
+.cine-dot.is-active{background:var(--brass);}
+/* Expand-to-lightbox. Shown only on the focused film — the neighbours aren't
+   playable, so an expand affordance there would be a dead end. Sits top-left
+   because Vimeo puts its own overflow menu in the top-right corner. */
+.cine-expand{
+  position:absolute; top:10px; left:10px; width:36px; height:36px; padding:0; z-index:2;
+  border:1px solid rgba(246,244,238,0.3); border-radius:2px;
+  background:rgba(20,41,58,0.62); color:var(--alpine-white);
+  cursor:pointer; opacity:0; pointer-events:none;
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity .3s ease, background .3s ease;
+}
+.cine-slide.is-active .cine-expand{opacity:1; pointer-events:auto;}
+.cine-expand:hover{background:var(--brass);}
+.cine-expand:focus-visible{outline:2px solid var(--brass); outline-offset:2px;}
+.cine-expand svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
+
+/* Lightbox. Vimeo collapses its control bar below ~620px of player width, and a
+   9:16 player can't reach that without being ~1100px tall — so portrait films are
+   always in the collapsed state and the bar below carries our own fullscreen button. */
+.cine-lightbox{
+  position:fixed; inset:0; z-index:100; display:flex;
+  flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  background:rgba(13,30,41,0.94); padding:24px;
+  opacity:0; transition:opacity .28s ease;
+}
+.cine-lightbox[hidden]{display:none;}
+.cine-lightbox.is-open{opacity:1;}
+.cine-lb-shell{
+  width:min(430px, 92vw, 46vh); aspect-ratio:9/16;
+  background:#000; position:relative;
+}
+.cine-lb-shell iframe{width:100%; height:100%; border:0; display:block;}
+.cine-lb-shell:fullscreen{width:100vw; height:100vh; aspect-ratio:auto; max-width:none;}
+.cine-lb-shell:-webkit-full-screen{width:100vw; height:100vh; aspect-ratio:auto; max-width:none;}
+.cine-lb-bar{
+  width:min(430px, 92vw, 46vh); display:flex; align-items:center;
+  justify-content:space-between; gap:16px;
+}
+.cine-lb-caption{display:flex; flex-direction:column; gap:2px; min-width:0;}
+.cine-lb-title{font-family:'Fraunces',serif; font-size:16px; font-weight:600; color:var(--alpine-white);}
+.cine-lb-detail{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--brass);}
+.cine-lb-fs{
+  display:flex; align-items:center; gap:7px; flex-shrink:0;
+  padding:8px 13px; border:1px solid var(--brass); border-radius:2px;
+  background:transparent; color:var(--brass); cursor:pointer;
+  font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase;
+  transition:background .25s ease, color .25s ease;
+}
+.cine-lb-fs:hover{background:var(--brass); color:var(--lake-deep);}
+.cine-lb-fs[hidden]{display:none;}
+.cine-lb-fs svg{width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
+.cine-lb-close{
+  position:absolute; top:18px; right:22px;
+  width:40px; height:40px; padding:0; line-height:1;
+  border:1px solid var(--line); border-radius:50%;
+  background:transparent; color:var(--alpine-white);
+  font-size:26px; cursor:pointer; transition:background .25s ease;
+}
+.cine-lb-close:hover{background:rgba(246,244,238,0.12);}
+@media(max-width:900px){.cine-slide{width:min(300px, 46%, 42vh);}}
+@media(max-width:600px){
+  .cine-slide{width:min(280px, 72%, 44vh);}
+  .cine-arrow{width:38px; height:38px; font-size:18px;}
+  .cine-arrow-prev{left:-4px;} .cine-arrow-next{right:-4px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .cine-slide{transition:none;}
+  .cine-lightbox{transition:none;}
+}
+
 /* WHY / STATS */
 .why{background:var(--alpine-white);}
 .why-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:70px; align-items:start;}
