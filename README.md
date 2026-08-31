@@ -109,7 +109,7 @@ The service-area map is still a hand-drawn SVG with hardcoded city dots, not a m
 
 A centre-focus carousel of vertical listing films, sitting between **Recent Work** and **Why Mountain Pine** on the Pricing section's `#E4EDEC` ground. The focused film sits dead centre with its neighbours peeking either side, and the ends wrap around. Arrows, dots, arrow keys, and horizontal swipe all move it; only the focused film is playable, and clicking a neighbour pulls it into focus instead.
 
-The films are **hosted on Vimeo, not self-hosted** — the same call Lake & Pine made, and here it is forced. Cloudflare Workers static assets cap an individual file at **25 MiB** on every plan, and the four source films are 74–244 MB of 4K portrait footage. Getting them under that ceiling means transcoding to roughly 1080×1920 and giving up adaptive bitrate; Vimeo sidesteps the limit, keeps ~500 MB of video out of the repository, and serves an appropriate rendition per connection.
+The films are **hosted on Vimeo, not self-hosted** — the same call Lake & Pine made, and here it is forced. Cloudflare Workers static assets cap an individual file at **25 MiB** on every plan, and the source films are 74–244 MB of 4K portrait footage. Getting them under that ceiling means transcoding to roughly 1080×1920 and giving up adaptive bitrate; Vimeo sidesteps the limit, keeps ~500 MB of video out of the repository, and serves an appropriate rendition per connection.
 
 ### Swapping in a film
 
@@ -121,7 +121,22 @@ Each slide carries its Vimeo id once, in the iframe `src`:
     <iframe src="https://player.vimeo.com/video/VIDEO_ID?api=1&title=0&byline=0&portrait=0&player_id=cine-0" ...></iframe>
 ```
 
-The id is the trailing digits of a `vimeo.com/1234567890` URL. `data-featured` marks the slide in focus on load — exactly one slide should have it. The carousel counts slides at runtime, so adding or removing a film needs only a matching `.cine-dot` button.
+The id is the trailing digits of a `vimeo.com/1234567890` URL. `data-featured` marks the slide in focus on load — exactly one slide should have it.
+
+The four films currently on the page. **DOM order is not visual order** — see below:
+
+| DOM index | Vimeo id | Title | Caption | At rest |
+|---|---|---|---|---|
+| 0 (featured) | `1222570040` | Agent Introduction | 27-second intro reel | centre |
+| 1 | `1222570041` | Family Move In | 1-minute client story | right |
+| 2 | `1222570042` | Daisy — Agent Introduction | 29-second intro reel | **hidden** |
+| 3 | `1222570043` | Listing Reel | 43-second walkthrough | left |
+
+With four slides the offsets the carousel hands out are `{-1, 0, 1, 2}`, and only `d=2` falls outside the track — so **index 2 is the hidden slot, not the last index**. Index 3 wraps around to `d=-1` and becomes the visible left neighbour. The weaker film sits at index 2 deliberately; moving it to the end of the markup would put it on screen and hide the listing reel instead. It stays reachable by arrow, dot, and swipe.
+
+An odd number of films is tidier — three gives a symmetric `{-1, 0, 1}` with nothing parked off-track. If a fifth film is added, that symmetry returns and the hidden slot disappears.
+
+Captions are hand-written, not read from Vimeo, so they can drift from the real durations — slide 3's film is 43 seconds by Vimeo's own count and the player badge says so on the thumbnail. The carousel counts slides at runtime, so adding or removing a film needs only a matching `.cine-dot` button.
 
 ### Portrait geometry
 
