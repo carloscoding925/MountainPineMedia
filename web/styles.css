@@ -303,23 +303,35 @@ section{padding:110px 0;}
 .cine-lightbox{
   position:fixed; inset:0; z-index:100; display:flex;
   flex-direction:column; align-items:center; justify-content:center; gap:16px;
-  background:rgba(13,30,41,0.94); padding:24px;
+  background:rgba(13,30,41,0.94);
+  /* Top padding reserves the close button's corner so the centred player can never
+     ride up under it on a short screen. --lb-chrome is that reserve plus the gap,
+     the caption bar and the bottom padding — the vertical budget the player is not
+     allowed to spend. svh rather than vh so mobile browser chrome is accounted for;
+     the vh line above it is the fallback for engines that don't know svh. */
+  --lb-chrome:164px;
+  --lb-w:min(430px, 92vw, calc((100vh - var(--lb-chrome)) * 9 / 16));
+  --lb-w:min(430px, 92vw, calc((100svh - var(--lb-chrome)) * 9 / 16));
+  padding:76px 24px 24px;
   opacity:0; transition:opacity .28s ease;
 }
 .cine-lightbox[hidden]{display:none;}
 .cine-lightbox.is-open{opacity:1;}
 .cine-lb-shell{
-  width:min(430px, 92vw, 46vh); aspect-ratio:9/16;
+  width:var(--lb-w); aspect-ratio:9/16;
   background:#000; position:relative;
 }
 .cine-lb-shell iframe{width:100%; height:100%; border:0; display:block;}
 .cine-lb-shell:fullscreen{width:100vw; height:100vh; aspect-ratio:auto; max-width:none;}
 .cine-lb-shell:-webkit-full-screen{width:100vw; height:100vh; aspect-ratio:auto; max-width:none;}
 .cine-lb-bar{
-  width:min(430px, 92vw, 46vh); display:flex; align-items:center;
+  width:var(--lb-w); display:flex; align-items:center;
   justify-content:space-between; gap:16px;
 }
-.cine-lb-caption{display:flex; flex-direction:column; gap:2px; min-width:0;}
+/* The caption is held to one line each so the bar's height stays predictable —
+   --lb-chrome budgets for it, and a wrapping title would silently overflow. */
+.cine-lb-caption{display:flex; flex-direction:column; gap:2px; min-width:0; overflow:hidden;}
+.cine-lb-title,.cine-lb-detail{white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .cine-lb-title{font-family:'Fraunces',serif; font-size:16px; font-weight:600; color:var(--alpine-white);}
 .cine-lb-detail{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--brass);}
 .cine-lb-fs{
@@ -335,8 +347,12 @@ section{padding:110px 0;}
 .cine-lb-close{
   position:absolute; top:18px; right:22px;
   width:40px; height:40px; padding:0; line-height:1;
+  /* The close button is the first child but the player is positioned and comes later,
+     so without an explicit stacking order the video paints over it and eats the tap.
+     The layout above keeps them apart; this guarantees the button wins if they ever meet. */
+  z-index:3;
   border:1px solid var(--line); border-radius:50%;
-  background:transparent; color:var(--alpine-white);
+  background:rgba(13,30,41,0.72); color:var(--alpine-white);
   font-size:26px; cursor:pointer; transition:background .25s ease;
 }
 .cine-lb-close:hover{background:rgba(246,244,238,0.12);}
@@ -345,6 +361,23 @@ section{padding:110px 0;}
   .cine-slide{width:min(280px, 72%, 44vh);}
   .cine-arrow{width:38px; height:38px; font-size:18px;}
   .cine-arrow-prev{left:-4px;} .cine-arrow-next{right:-4px;}
+}
+/* Landscape phones: a 9:16 player is hopeless here regardless, but trimming the
+   reserve keeps the caption bar on screen and the close button clear of the video. */
+@media(max-height:480px){
+  .cine-lightbox{--lb-chrome:128px; padding:52px 16px 16px;}
+  .cine-lb-close{top:10px; right:12px; width:34px; height:34px; font-size:22px;}
+  /* The bar is only as wide as the player, which is tiny here — the label goes
+     for the same reason it does on a narrow screen, even though the viewport is wide. */
+  .cine-lb-fs .fs-label{display:none;}
+  .cine-lb-fs{padding:9px 10px;}
+}
+/* Narrow screens: the word "Fullscreen" costs ~90px the caption needs more. The
+   button falls back to its icon, and the script keeps an aria-label on it — the
+   hidden span is invisible to screen readers too, not just to the eye. */
+@media(max-width:420px){
+  .cine-lb-fs .fs-label{display:none;}
+  .cine-lb-fs{padding:9px 10px;}
 }
 @media(prefers-reduced-motion:reduce){
   .cine-slide{transition:none;}

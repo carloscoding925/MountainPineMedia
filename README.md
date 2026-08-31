@@ -153,6 +153,17 @@ That button is hidden on iPhone — iOS Safari has never supported the Fullscree
 
 The lightbox tears its iframe down on close rather than after the fade, so audio stops the moment the film is dismissed.
 
+**Sizing is a vertical budget, not a free-for-all.** The close button sits in the top-right corner, absolutely positioned, and it is the *first* child — the player is positioned and comes later, so without an explicit `z-index` the video paints over it and swallows the tap. That is a real failure mode, not a theoretical one: on a 667px-tall screen the centred player rode up to 20px from the top and `elementFromPoint` over the button returned the Vimeo iframe.
+
+Two things keep it fixed, and both are needed:
+
+- `.cine-lb-close` carries `z-index:3`, so it wins if the two ever meet again.
+- `--lb-chrome` (164px, or 128px under `max-height:480px`) is the vertical space the player is *not* allowed to spend — the button's corner, the gap, the caption bar, the bottom padding. The player's width derives from what's left: `min(430px, 92vw, calc((100svh - var(--lb-chrome)) * 9 / 16))`. `svh` rather than `vh` so mobile browser chrome counts, with a `vh` line above as the fallback.
+
+That budget only works if the bar's height is predictable, so the caption is pinned to one line each with `text-overflow:ellipsis` — a wrapping title silently overflowed it before. To buy the caption room back, the `FULLSCREEN` button drops to its icon under 420px wide or 480px tall, and `syncFsLabel()` mirrors the label into an `aria-label` because `display:none` hides the span from screen readers too.
+
+Verified with the lightbox open at 390×844, 390×667, 360×640, 320×568, 844×390, 768×1024 and 1920×1080: no overlap, button hit-testable, caption bar on screen, player exactly 9:16. Desktop and iPad are untouched at 430×764.
+
 ## Image workflow
 
 Source photos from the camera are typically 5–10 MB each — far larger than what the web needs. Before adding new photos to the portfolio:

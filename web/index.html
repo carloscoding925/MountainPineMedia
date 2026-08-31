@@ -716,9 +716,14 @@
     }
 
     function syncFsLabel() {
-      fsLabel.textContent = fullscreenElement() ? 'Exit' : 'Fullscreen';
+      const on = !!fullscreenElement();
+      fsLabel.textContent = on ? 'Exit' : 'Fullscreen';
+      // Narrow screens hide that span, which takes it away from assistive tech as
+      // well, so the button carries its name as an attribute too.
+      fsBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Fullscreen');
     }
 
+    syncFsLabel();
     fsBtn.addEventListener('click', toggleFullscreen);
     closeBtn.addEventListener('click', closeLightbox);
     lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
