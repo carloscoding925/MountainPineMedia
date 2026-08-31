@@ -11,6 +11,7 @@ The site is intentionally simple — no build step, no framework — so it stays
 - **HTML / CSS / vanilla JS** — single `index.html`, single `styles.css`, and one inline `<script>` covering the sticky-nav scroll state, the mobile hamburger toggle, reveal-on-scroll animations via `IntersectionObserver`, and the inquiry form's `mailto:` composition.
 - **Google Fonts** — Fraunces, Inter, and IBM Plex Mono, loaded via `<link rel="preconnect">` for fast first paint.
 - **Inline SVG** — the brand mark, the hero contour field, and the service-area map are all hand-drawn SVG rather than image files, so nothing above the fold waits on a network image. The **Recent Work** tiles are real photographs (see [Portfolio tiles](#portfolio-tiles)).
+- **Vimeo** — the listing films are embedded via Vimeo's iframe player rather than self-hosted. Not just a preference: Cloudflare caps a static asset at 25 MiB and the source films are 74–244 MB each (see [Cinematography](#cinematography)).
 - **Cloudflare Workers** — deployment target, using Workers static assets. Configured via [`wrangler.jsonc`](web/wrangler.jsonc) with `assets.directory: "."` so the `web/` folder is served as the site root.
 - **ImageMagick** — local CLI tool used to resize and recompress listing photos before deploy, and to generate the favicon set (see [Image workflow](#image-workflow)).
 
@@ -103,6 +104,39 @@ Gallery payload: **1.44 MB** on a 1× display, **1.73 MB** on 2×. If a differen
 Tiles zoom slightly on hover. Chrome rasterizes a layer at its layout size and then GPU-scales that bitmap, so a `scale()` on an un-promoted layer visibly softens until the browser re-rasterizes; `.pf-item img` sets `will-change:transform` under `@media(hover:hover)` so the layer is composited up front. The zoom is disabled entirely under `prefers-reduced-motion`.
 
 The service-area map is still a hand-drawn SVG with hardcoded city dots, not a mapping library — adding a town means adding a `<circle>` and a `<text>` in the same 400×400 coordinate space, plus a matching `.area-tag` chip above it.
+
+## Cinematography
+
+A centre-focus carousel of vertical listing films, sitting between **Recent Work** and **Why Mountain Pine** on the Pricing section's `#E4EDEC` ground. The focused film sits dead centre with its neighbours peeking either side, and the ends wrap around. Arrows, dots, arrow keys, and horizontal swipe all move it; only the focused film is playable, and clicking a neighbour pulls it into focus instead.
+
+The films are **hosted on Vimeo, not self-hosted** — the same call Lake & Pine made, and here it is forced. Cloudflare Workers static assets cap an individual file at **25 MiB** on every plan, and the four source films are 74–244 MB of 4K portrait footage. Getting them under that ceiling means transcoding to roughly 1080×1920 and giving up adaptive bitrate; Vimeo sidesteps the limit, keeps ~500 MB of video out of the repository, and serves an appropriate rendition per connection.
+
+### Swapping in a film
+
+Each slide carries its Vimeo id once, in the iframe `src`:
+
+```html
+<div class="cine-slide" data-featured>
+  <div class="cine-thumb">
+    <iframe src="https://player.vimeo.com/video/VIDEO_ID?api=1&title=0&byline=0&portrait=0&player_id=cine-0" ...></iframe>
+```
+
+The id is the trailing digits of a `vimeo.com/1234567890` URL. `data-featured` marks the slide in focus on load — exactly one slide should have it. The carousel counts slides at runtime, so adding or removing a film needs only a matching `.cine-dot` button.
+
+### Portrait geometry
+
+Two things about the layout are load-bearing:
+
+- **Slides are `min(330px, 32%, 42vh)` wide.** Three caps, because a 9:16 player grows tall fast: an absolute ceiling, a share of the track, and a share of the viewport height — the last keeps a portrait film from running off the bottom of a short laptop screen. Measured 330×587 for the player at desktop, down to 252×448 on a 390px phone, always exactly 9:16.
+- **Neighbours sit at `translateX(±100%) scale(0.82)`.** At 330px wide that puts a neighbour's inner edge 30px clear of the focused slide. Narrowing the slide without revisiting the transform will overlap them.
+
+### Why the lightbox exists here
+
+Lake & Pine sizes its slides at 648px specifically because **Vimeo collapses its control bar — fullscreen included — below roughly 620px of player width**. A 9:16 player cannot reach 620px wide without standing ~1100px tall, so portrait films are *always* in the collapsed state, in the carousel and in the lightbox alike. That makes the expand control more important than it is on the sibling site, not less: the lightbox reopens the film at up to 430px and the bar beneath it carries our own `FULLSCREEN` button, so nobody has to hunt through Vimeo's overflow menu.
+
+That button is hidden on iPhone — iOS Safari has never supported the Fullscreen API on arbitrary elements, and the `<video>` it would need lives inside Vimeo's cross-origin iframe. iPhone visitors use Vimeo's own control. macOS and iPad Safari are covered by the `webkit`-prefixed fallbacks in both the script and `styles.css`. If the browser refuses our fullscreen request outright, the code falls back to asking the Vimeo player to go fullscreen itself over `postMessage`.
+
+The lightbox tears its iframe down on close rather than after the fade, so audio stops the moment the film is dismissed.
 
 ## Image workflow
 

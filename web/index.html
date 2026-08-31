@@ -106,6 +106,7 @@
       <div class="navlinks">
         <a href="#services">Services</a>
         <a href="#work">Work</a>
+        <a href="#film">Film</a>
         <a href="#pricing">Pricing</a>
         <a href="#area">Service Area</a>
         <a href="#contact">Contact</a>
@@ -228,6 +229,103 @@
     </div>
   </div>
 </section>
+
+<section class="cinema" id="film">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-eyebrow">Cinematography</div>
+      <h2>Vertical film, cut for the feed.</h2>
+      <p>Agent introductions, full home walkthroughs, and short listing demos — shot vertical and edited tight, so they land the way buyers already scroll.</p>
+    </div>
+
+    <!-- ==================================================================
+         PLACEHOLDER VIMEO IDS — replace the four numbers below with the
+         real ones once the uploads finish. A Vimeo URL looks like
+         vimeo.com/1234567890; the trailing digits are the id.
+             1111111111  ->  Agent Introduction
+             2222222222  ->  Daisy — Agent Feature
+             3333333333  ->  Listing Reel
+             4444444444  ->  Full Home Walkthrough
+         Each id appears once here. Titles and durations are guesses from
+         the source filenames — edit .cine-name / .cine-detail to match.
+         ================================================================== -->
+    <div class="cine-carousel reveal">
+      <button class="cine-arrow cine-arrow-prev" type="button" aria-label="Previous film">&lsaquo;</button>
+      <div class="cine-track" id="cineTrack" tabindex="0">
+          <div class="cine-slide" data-featured>
+            <div class="cine-thumb">
+              <iframe src="https://player.vimeo.com/video/1111111111?api=1&amp;title=0&amp;byline=0&amp;portrait=0&amp;player_id=cine-0" title="Agent Introduction" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" allowfullscreen></iframe>
+              <button class="cine-expand" type="button" aria-label="Watch Agent Introduction larger">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+              </button>
+            </div>
+            <div class="cine-meta">
+              <span class="cine-name">Agent Introduction</span>
+              <span class="cine-detail">27-second intro reel</span>
+            </div>
+          </div>
+          <div class="cine-slide">
+            <div class="cine-thumb">
+              <iframe src="https://player.vimeo.com/video/2222222222?api=1&amp;title=0&amp;byline=0&amp;portrait=0&amp;player_id=cine-1" title="Daisy — Agent Feature" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" allowfullscreen></iframe>
+              <button class="cine-expand" type="button" aria-label="Watch Daisy — Agent Feature larger">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+              </button>
+            </div>
+            <div class="cine-meta">
+              <span class="cine-name">Daisy — Agent Feature</span>
+              <span class="cine-detail">29-second profile</span>
+            </div>
+          </div>
+          <div class="cine-slide">
+            <div class="cine-thumb">
+              <iframe src="https://player.vimeo.com/video/3333333333?api=1&amp;title=0&amp;byline=0&amp;portrait=0&amp;player_id=cine-2" title="Listing Reel" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" allowfullscreen></iframe>
+              <button class="cine-expand" type="button" aria-label="Watch Listing Reel larger">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+              </button>
+            </div>
+            <div class="cine-meta">
+              <span class="cine-name">Listing Reel</span>
+              <span class="cine-detail">43-second walkthrough</span>
+            </div>
+          </div>
+          <div class="cine-slide">
+            <div class="cine-thumb">
+              <iframe src="https://player.vimeo.com/video/4444444444?api=1&amp;title=0&amp;byline=0&amp;portrait=0&amp;player_id=cine-3" title="Full Home Walkthrough" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" allowfullscreen></iframe>
+              <button class="cine-expand" type="button" aria-label="Watch Full Home Walkthrough larger">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+              </button>
+            </div>
+            <div class="cine-meta">
+              <span class="cine-name">Full Home Walkthrough</span>
+              <span class="cine-detail">1-minute tour</span>
+            </div>
+          </div>
+      </div>
+      <button class="cine-arrow cine-arrow-next" type="button" aria-label="Next film">&rsaquo;</button>
+    </div>
+    <div class="cine-dots" id="cineDots">
+        <button class="cine-dot" type="button" aria-label="Show Agent Introduction"></button>
+        <button class="cine-dot" type="button" aria-label="Show Daisy — Agent Feature"></button>
+        <button class="cine-dot" type="button" aria-label="Show Listing Reel"></button>
+        <button class="cine-dot" type="button" aria-label="Show Full Home Walkthrough"></button>
+    </div>
+  </div>
+</section>
+
+<div class="cine-lightbox" id="cineLightbox" role="dialog" aria-modal="true" aria-labelledby="cineLbTitle" hidden>
+  <button class="cine-lb-close" id="cineLbClose" type="button" aria-label="Close film">&times;</button>
+  <div class="cine-lb-shell" id="cineLbShell"></div>
+  <div class="cine-lb-bar">
+    <div class="cine-lb-caption">
+      <span class="cine-lb-title" id="cineLbTitle"></span>
+      <span class="cine-lb-detail" id="cineLbDetail"></span>
+    </div>
+    <button class="cine-lb-fs" id="cineLbFs" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      <span class="fs-label">Fullscreen</span>
+    </button>
+  </div>
+</div>
 
 <section class="why">
   <div class="wrap">
@@ -452,6 +550,198 @@
       note.textContent = "Your email app should be opening — if nothing happened, write us at book@mountain-pine-media.com.";
       note.classList.add('is-active');
     });
+  })();
+
+  // Cinematography carousel — infinite centre mode. Each slide is placed by its offset
+  // from the active one, so the focused film is always dead centre and the ends wrap.
+  (function () {
+    const track = document.getElementById('cineTrack');
+    if (!track) return;
+    const slides = Array.from(track.querySelectorAll('.cine-slide'));
+    const dots = Array.from(document.querySelectorAll('.cine-dot'));
+    const count = slides.length;
+    if (!count) return;
+    // The slide marked data-featured is in focus on load; otherwise start in the middle.
+    const featured = slides.findIndex(s => s.hasAttribute('data-featured'));
+    let activeIndex = featured === -1 ? Math.floor(count / 2) : featured;
+    let placed = slides.map(() => 0);
+
+    function pauseSlide(slide) {
+      const iframe = slide && slide.querySelector('iframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(
+          JSON.stringify({ method: 'pause' }), 'https://player.vimeo.com');
+      }
+    }
+
+    // Signed distance from the active slide, taking the short way round the loop.
+    function offsetOf(i) {
+      let d = ((i - activeIndex) % count + count) % count;
+      if (d > Math.floor(count / 2)) d -= count;
+      return d;
+    }
+
+    function render() {
+      slides.forEach((slide, i) => {
+        const d = offsetOf(i);
+        const wraps = Math.abs(d - placed[i]) > 1;
+        if (wraps) slide.classList.add('is-teleport');
+        slide.style.setProperty('--d', d);
+        slide.classList.toggle('is-active', d === 0);
+        // Neighbours are decorative and not reachable by keyboard until focused.
+        const frame = slide.querySelector('iframe');
+        if (frame) frame.tabIndex = d === 0 ? 0 : -1;
+        if (wraps) {
+          void slide.offsetWidth; // commit the jump before re-enabling the transition
+          slide.classList.remove('is-teleport');
+        }
+        placed[i] = d;
+      });
+      dots.forEach((dot, i) => dot.classList.toggle('is-active', i === activeIndex));
+    }
+
+    function goTo(index) {
+      const next = ((index % count) + count) % count;
+      if (next === activeIndex) return;
+      pauseSlide(slides[activeIndex]);
+      activeIndex = next;
+      render();
+    }
+
+    document.querySelector('.cine-arrow-prev').addEventListener('click', () => goTo(activeIndex - 1));
+    document.querySelector('.cine-arrow-next').addEventListener('click', () => goTo(activeIndex + 1));
+    dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+    track.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') goTo(activeIndex - 1);
+      if (e.key === 'ArrowRight') goTo(activeIndex + 1);
+    });
+
+    // Click a peeking neighbour to pull it into focus. The focused slide keeps its own
+    // clicks so Vimeo still handles play/pause — only the expand button is intercepted.
+    slides.forEach((slide, i) => {
+      slide.addEventListener('click', () => {
+        if (offsetOf(i) !== 0) goTo(i);
+      });
+      const expand = slide.querySelector('.cine-expand');
+      if (expand) {
+        expand.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openLightbox(slide, expand);
+        });
+      }
+    });
+
+    // Horizontal swipe — registers on the areas either side of the video iframes.
+    let swipeStart = null;
+    track.addEventListener('pointerdown', (e) => { swipeStart = e.clientX; });
+    track.addEventListener('pointercancel', () => { swipeStart = null; });
+    track.addEventListener('pointerup', (e) => {
+      if (swipeStart === null) return;
+      const dx = e.clientX - swipeStart;
+      swipeStart = null;
+      if (Math.abs(dx) > 40) goTo(activeIndex + (dx < 0 ? 1 : -1));
+    });
+
+    // ---- Lightbox --------------------------------------------------------------
+    // Vimeo folds its control bar away below roughly 620px of player width. A 9:16
+    // player would have to be ~1100px tall to clear that, so portrait films are always
+    // collapsed — the bar under the lightbox carries our own fullscreen control instead.
+    const lightbox = document.getElementById('cineLightbox');
+    const shell = document.getElementById('cineLbShell');
+    const closeBtn = document.getElementById('cineLbClose');
+    const fsBtn = document.getElementById('cineLbFs');
+    const fsLabel = fsBtn.querySelector('.fs-label');
+    const lbTitle = document.getElementById('cineLbTitle');
+    const lbDetail = document.getElementById('cineLbDetail');
+    let lastTrigger = null;
+
+    // iOS Safari has no Fullscreen API for arbitrary elements — the lightbox is already
+    // near-fullscreen there, and Vimeo's own control still works inside it.
+    const fsEnabled = document.fullscreenEnabled || document.webkitFullscreenEnabled;
+    if (!fsEnabled) fsBtn.hidden = true;
+
+    function fullscreenElement() {
+      return document.fullscreenElement || document.webkitFullscreenElement || null;
+    }
+
+    function openLightbox(slide, trigger) {
+      const inline = slide.querySelector('iframe');
+      const id = inline && inline.src.match(/video\/(\d+)/);
+      if (!id) return;
+
+      pauseSlide(slide);
+      const name = slide.querySelector('.cine-name').textContent.trim();
+      lbTitle.textContent = name;
+      lbDetail.textContent = slide.querySelector('.cine-detail').textContent.trim();
+
+      const frame = document.createElement('iframe');
+      frame.src = 'https://player.vimeo.com/video/' + id[1] +
+        '?api=1&autoplay=1&title=0&byline=0&portrait=0&player_id=cine-lightbox';
+      frame.title = name;
+      frame.allow = 'autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media';
+      frame.allowFullscreen = true;
+      shell.appendChild(frame);
+
+      lastTrigger = trigger;
+      lightbox.hidden = false;
+      void lightbox.offsetWidth; // commit the unhide so the fade actually runs
+      lightbox.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      closeBtn.focus();
+    }
+
+    function closeLightbox() {
+      if (lightbox.hidden) return;
+      if (fullscreenElement()) {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      }
+      // Tear the player down immediately rather than after the fade, so audio stops
+      // the moment the film is dismissed.
+      const frame = shell.querySelector('iframe');
+      if (frame) frame.remove();
+      lightbox.classList.remove('is-open');
+      document.body.style.overflow = '';
+      setTimeout(() => { lightbox.hidden = true; }, 280);
+      if (lastTrigger) { lastTrigger.focus(); lastTrigger = null; }
+    }
+
+    // Ask the Vimeo player to go fullscreen itself, for browsers that refuse to put
+    // our own element fullscreen (some embedded webviews decline outright).
+    function askPlayerForFullscreen() {
+      const frame = shell.querySelector('iframe');
+      if (frame && frame.contentWindow) {
+        frame.contentWindow.postMessage(
+          JSON.stringify({ method: 'requestFullscreen' }), 'https://player.vimeo.com');
+      }
+    }
+
+    function toggleFullscreen() {
+      if (fullscreenElement()) {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        return;
+      }
+      const request = shell.requestFullscreen || shell.webkitRequestFullscreen;
+      if (!request) { askPlayerForFullscreen(); return; }
+      const pending = request.call(shell);
+      if (pending && pending.catch) pending.catch(askPlayerForFullscreen);
+    }
+
+    function syncFsLabel() {
+      fsLabel.textContent = fullscreenElement() ? 'Exit' : 'Fullscreen';
+    }
+
+    fsBtn.addEventListener('click', toggleFullscreen);
+    closeBtn.addEventListener('click', closeLightbox);
+    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+    document.addEventListener('fullscreenchange', syncFsLabel);
+    document.addEventListener('webkitfullscreenchange', syncFsLabel);
+
+    track.classList.add('is-init');
+    render();
+    // Drop the no-transition guard once the opening positions are committed, so the
+    // first real navigation animates instead of snapping.
+    requestAnimationFrame(() => track.classList.remove('is-init'));
   })();
 </script>
 
