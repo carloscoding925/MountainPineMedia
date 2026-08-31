@@ -1,1 +1,7 @@
 .DS_Store
+
+# Original full-resolution photos: kept locally for re-processing, never deployed
+# and too large to version. `assets/*` rather than `assets/` so git still descends
+# into the folder and can track .gitkeep, which preserves it in a fresh clone.
+assets/*
+!assets/.gitkeep
