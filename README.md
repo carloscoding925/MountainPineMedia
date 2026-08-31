@@ -10,7 +10,7 @@ The site is intentionally simple — no build step, no framework — so it stays
 
 - **HTML / CSS / vanilla JS** — single `index.html`, single `styles.css`, and one inline `<script>` covering the sticky-nav scroll state, the mobile hamburger toggle, reveal-on-scroll animations via `IntersectionObserver`, and the inquiry form's `mailto:` composition.
 - **Google Fonts** — Fraunces, Inter, and IBM Plex Mono, loaded via `<link rel="preconnect">` for fast first paint.
-- **Inline SVG** — the brand mark, the hero contour field, the portfolio placeholder tiles, and the service-area map are all hand-drawn SVG rather than image files. Nothing in the layout waits on a network image (see [Placeholder artwork](#placeholder-artwork)).
+- **Inline SVG** — the brand mark, the hero contour field, and the service-area map are all hand-drawn SVG rather than image files, so nothing above the fold waits on a network image. The **Recent Work** tiles are real photographs (see [Portfolio tiles](#portfolio-tiles)).
 - **Cloudflare Workers** — deployment target, using Workers static assets. Configured via [`wrangler.jsonc`](web/wrangler.jsonc) with `assets.directory: "."` so the `web/` folder is served as the site root.
 - **ImageMagick** — local CLI tool used to resize and recompress listing photos before deploy, and to generate the favicon set (see [Image workflow](#image-workflow)).
 
@@ -57,13 +57,52 @@ npx wrangler dev
 
 Pushes to the `main` branch trigger an automatic build and deploy of the `web/` directory to Cloudflare.
 
-## Placeholder artwork
+## Portfolio tiles
 
-The six portfolio tiles are not photographs yet — each is a gradient panel with a drawn contour line and a caption tag naming the neighbourhood and listing type. They exist so the grid's proportions and captions are already settled when real galleries land.
+**Recent Work** is a mosaic: one feature photo at 2×2 with five supporting tiles around it. Every tile is 3:2 to match the camera's native aspect, so `object-fit: cover` crops almost nothing.
 
-To swap one for a real photo, run the image through the pipeline below and replace the tile's `<div class="ph">` and its `<svg>` with a single `<img>`; the `.pf-item` wrapper already handles the 4:5 aspect ratio, the rounded crop, and the caption overlay.
+```
++---------------+  +-----+
+|               |  | #2  |
+|   #1 FEATURE  |  +-----+
+|               |  | #3  |
++---------------+  +-----+
++-----+  +-----+  +-----+
+| #4  |  | #5  |  | #6  |
++-----+  +-----+  +-----+
+```
 
-The service-area map is likewise a hand-drawn SVG with hardcoded city dots, not a mapping library — adding a town means adding a `<circle>` and a `<text>` in the same 400×400 coordinate space, plus a matching `.area-tag` chip above it.
+The feature carries `class="pf-item pf-feature"`; the rest are plain `.pf-item`. To promote a different photo, move that class — the grid re-flows on its own, and source order decides the rest.
+
+The feature's height comes from its `grid-row: span 2`, not from `aspect-ratio` (which is why `.pf-feature` sets `aspect-ratio:auto`). Two stacked 3:2 tiles plus an 18px gap happen to land within a pixel of 3:2 at double width, so the feature reads as the same shape as its neighbours without being told to.
+
+**The gallery breaks out wider than the rest of the page.** `.wrap` stays at 1180px so the text measure and nav are untouched, while `.pf-grid` widens to `min(1520px, 100vw - 64px)` and re-centres with negative margins. Margins rather than a `transform: translateX(-50%)`, because `.pf-grid` also carries `.reveal`, whose entrance animation owns the transform property and would overwrite it.
+
+Measured at a 1920px viewport: feature **1007×671**, supporting tiles **495×330**, every ratio exactly 1.50.
+
+Responsive behaviour — the feature can't keep a 2×2 span once there are fewer than three columns, so both breakpoints reset it:
+
+| Viewport | Columns | Feature | Others |
+|---|---|---|---|
+| > 900px | 3 | 1007×671 (2×2) | 495×330 |
+| ≤ 900px | 2 | 796×531 (full-width banner) | 389×259 |
+| ≤ 600px | 1 | 436×291 (same as the rest) | 436×291 |
+
+### Image resolution and the hover zoom
+
+The feature tile renders about 1007 CSS px wide, so a 2× display needs ~2014px of source — more than the 1600px the standard pipeline produces. It therefore gets a second export at 2400px and a `srcset`, and is the only image that needs one; the supporting tiles at 495 CSS px are covered by 1600px even at 2×.
+
+```bash
+magick "twilight 2.jpg" -auto-orient -resize '2400x2400>' -strip \
+  -interlace Plane -sampling-factor 4:2:0 -quality 82 \
+  "../web/optimized-assets/twilight-2-2400.jpg"
+```
+
+Gallery payload: **1.44 MB** on a 1× display, **1.73 MB** on 2×. If a different photo is promoted to the feature slot, give it the 2400px export too — otherwise it will look soft on retina.
+
+Tiles zoom slightly on hover. Chrome rasterizes a layer at its layout size and then GPU-scales that bitmap, so a `scale()` on an un-promoted layer visibly softens until the browser re-rasterizes; `.pf-item img` sets `will-change:transform` under `@media(hover:hover)` so the layer is composited up front. The zoom is disabled entirely under `prefers-reduced-motion`.
+
+The service-area map is still a hand-drawn SVG with hardcoded city dots, not a mapping library — adding a town means adding a `<circle>` and a `<text>` in the same 400×400 coordinate space, plus a matching `.area-tag` chip above it.
 
 ## Image workflow
 
@@ -75,6 +114,7 @@ Source photos from the camera are typically 5–10 MB each — far larger than w
    ```bash
    cd assets
    for f in your-photos.jpg; do
+     out="$(echo "$f" | tr ' ' '-')"
      magick "$f" \
        -auto-orient \
        -resize '1600x1600>' \
@@ -82,13 +122,17 @@ Source photos from the camera are typically 5–10 MB each — far larger than w
        -interlace Plane \
        -sampling-factor 4:2:0 \
        -quality 82 \
-       "../web/optimized-assets/$f"
+       "../web/optimized-assets/$out"
    done
    ```
 
    Settings: max 1600px on the long edge (still crisp on retina), JPEG quality 82, EXIF stripped, progressive encoding so images render top-to-bottom as they download.
 
+   Give the output a URL-safe name — no spaces. The loop above pipes filenames through `tr ' ' '-'` for that reason, so `drone twilight.jpg` in `assets/` lands as `drone-twilight.jpg` in `optimized-assets/`.
+
 3. Reference the new file from `index.html` using a path like `optimized-assets/your-photo.jpg`.
+
+This pipeline took the nine current listing photos from ~102 MB of originals down to ~2.8 MB web-ready (the six on the page total ~1.4 MB) with no visible quality loss.
 
 ### Regenerating the icons
 
