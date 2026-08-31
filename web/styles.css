@@ -144,8 +144,17 @@ section{padding:110px 0;}
 /* SERVICES */
 .services{background:var(--alpine-white);}
 .svc-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--stone); border:1px solid var(--stone);}
+/* The dividers are the grid's stone background showing through 1px gaps, which
+   means a trailing empty cell shows that background as a solid block. There are
+   five cards in a six-cell grid, so this fills the leftover cell with the card
+   colour. It bleeds 1px right and down to cover the outer border on those two
+   edges — otherwise the empty cell keeps a frame and still reads as a missing
+   tile. Top and left stay at 0 on purpose: those gap lines are card 03's bottom
+   border and card 05's right border, which belong to real tiles. */
+.svc-grid::after{content:''; background:var(--alpine-white); margin:0 -1px -1px 0;}
 @media(max-width:900px){.svc-grid{grid-template-columns:1fr 1fr;}}
-@media(max-width:600px){.svc-grid{grid-template-columns:1fr;}}
+/* One column leaves no empty cell — the filler would add a stray sixth row. */
+@media(max-width:600px){.svc-grid{grid-template-columns:1fr;} .svc-grid::after{display:none;}}
 .svc-card{background:var(--alpine-white); padding:38px 30px; min-height:230px; display:flex; flex-direction:column; justify-content:space-between; transition:background .25s;}
 .svc-card:hover{background:#FBFAF6;}
 .svc-num{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--brass);}
