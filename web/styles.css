@@ -142,20 +142,56 @@ section{padding:110px 0;}
 .divider{height:1px; background:linear-gradient(90deg, transparent, var(--stone) 20%, var(--stone) 80%, transparent);}
 
 /* SERVICES */
+/* Each tile carries its own 1px frame, rather than the older trick of letting a
+   stone container background show through 1px gaps. That trick cannot centre a
+   row: the leftover half-column at each end has to be filled with something, and
+   every colour available is the card colour, so the fill merges into the cards
+   and the row reads as two oversized tiles. With the border on the tile, a tile
+   is exactly as wide as its grid area no matter what sits beside it.
+
+   Shared edges are collapsed by dropping one side rather than by overlapping with
+   a negative margin, so every card stays exactly the same width and no card
+   overflows its track. Written mobile-first in three exclusive ranges — the
+   border rules all sit at the same specificity, and overlapping min/max queries
+   would have them fighting on source order instead of on breakpoint. */
 .services{background:var(--alpine-white);}
-.svc-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--stone); border:1px solid var(--stone);}
-/* The dividers are the grid's stone background showing through 1px gaps, which
-   means a trailing empty cell shows that background as a solid block. There are
-   five cards in a six-cell grid, so this fills the leftover cell with the card
-   colour. It bleeds 1px right and down to cover the outer border on those two
-   edges — otherwise the empty cell keeps a frame and still reads as a missing
-   tile. Top and left stay at 0 on purpose: those gap lines are card 03's bottom
-   border and card 05's right border, which belong to real tiles. */
-.svc-grid::after{content:''; background:var(--alpine-white); margin:0 -1px -1px 0;}
-@media(max-width:900px){.svc-grid{grid-template-columns:1fr 1fr;}}
-/* One column leaves no empty cell — the filler would add a stray sixth row. */
-@media(max-width:600px){.svc-grid{grid-template-columns:1fr;} .svc-grid::after{display:none;}}
-.svc-card{background:var(--alpine-white); padding:38px 30px; min-height:230px; display:flex; flex-direction:column; justify-content:space-between; transition:background .25s;}
+.svc-grid{display:grid; grid-template-columns:1fr;}
+.svc-card{
+  background:var(--alpine-white); border:1px solid var(--stone);
+  padding:38px 30px; min-height:230px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  transition:background .25s;
+}
+/* One column: each card's top edge is the previous card's bottom border. */
+.svc-card + .svc-card{border-top:0;}
+
+@media(min-width:601px) and (max-width:900px){
+  .svc-grid{grid-template-columns:1fr 1fr;}
+  .svc-card + .svc-card{border-top:1px solid var(--stone);}
+  /* Right-hand column takes its left edge from the card beside it. */
+  .svc-card:nth-child(2),
+  .svc-card:nth-child(4){border-left:0;}
+  /* Everything below the first row takes its top edge from the row above. */
+  .svc-card:nth-child(n+3){border-top:0;}
+}
+
+@media(min-width:901px){
+  /* Six half-columns with each card spanning two. Row one fills all six; row two's
+     pair starts half a column in from each edge, so it sits centred under the three
+     above at exactly the same tile size, and the half-column left spare at each end
+     is plain section background rather than a filled cell. */
+  .svc-grid{grid-template-columns:repeat(6,1fr);}
+  .svc-card{grid-column:span 2;}
+  .svc-card:nth-child(4){grid-column:2 / span 2;}
+  .svc-card:nth-child(5){grid-column:4 / span 2;}
+  .svc-card + .svc-card{border-top:1px solid var(--stone);}
+  .svc-card:nth-child(2),
+  .svc-card:nth-child(3),
+  .svc-card:nth-child(5){border-left:0;}
+  /* Row one's bottom borders run the full width, so they cover row two's top edge
+     even though the pair below straddles the columns above it. */
+  .svc-card:nth-child(n+4){border-top:0;}
+}
 .svc-card:hover{background:#FBFAF6;}
 .svc-num{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--brass);}
 .svc-card h3{font-size:20px; margin-top:26px; font-weight:600;}
