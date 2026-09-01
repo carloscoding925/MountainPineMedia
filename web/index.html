@@ -30,7 +30,8 @@
   "url": "https://mountain-pine-media.com/",
   "image": "https://mountain-pine-media.com/og-image.png",
   "logo": "https://mountain-pine-media.com/og-image.png",
-  "email": "book@mountain-pine-media.com",
+  "email": "mtnpinemedia@gmail.com",
+  "sameAs": ["https://www.instagram.com/mountainpine.media/"],
   "priceRange": "$$",
   "areaServed": [
     { "@type": "City", "name": "Reno, Nevada" },
@@ -243,8 +244,8 @@
       <div class="cine-track" id="cineTrack" tabindex="0">
           <div class="cine-slide" data-featured>
             <div class="cine-thumb">
-              <iframe src="https://player.vimeo.com/video/1222570040?api=1&amp;title=0&amp;byline=0&amp;portrait=0&amp;player_id=cine-0" title="Agent Introduction" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" allowfullscreen></iframe>
-              <button class="cine-expand" type="button" aria-label="Watch Agent Introduction larger">
+              <iframe src="https://player.vimeo.com/video/1222570040?api=1&amp;title=0&amp;byline=0&amp;portrait=0&amp;player_id=cine-0" title="Crystal - Agent Feature" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media" allowfullscreen></iframe>
+              <button class="cine-expand" type="button" aria-label="Watch Crystal - Agent Feature larger">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
               </button>
               <div class="cine-swipe" aria-hidden="true"></div>
@@ -297,7 +298,7 @@
       <button class="cine-arrow cine-arrow-next" type="button" aria-label="Next film">&rsaquo;</button>
     </div>
     <div class="cine-dots" id="cineDots">
-        <button class="cine-dot" type="button" aria-label="Show Agent Introduction"></button>
+        <button class="cine-dot" type="button" aria-label="Show Crystal - Agent Feature"></button>
         <button class="cine-dot" type="button" aria-label="Show Family Move In"></button>
         <button class="cine-dot" type="button" aria-label="Show Daisy — Agent Introduction"></button>
         <button class="cine-dot" type="button" aria-label="Show Listing Reel"></button>
@@ -453,9 +454,9 @@
       <h2>Get your listing on the calendar.</h2>
       <p>Send the address and your target list date — we'll confirm a shoot time within a day.</p>
       <div class="contact-links">
-        <a href="mailto:book@mountain-pine-media.com">book@mountain-pine-media.com <span>→</span></a>
-        <a href="#">@mountainpinemedia <span>→</span></a>
-        <a href="tel:+17750000000">(775) 000-0000 <span>→</span></a>
+        <a href="mailto:mtnpinemedia@gmail.com">mtnpinemedia@gmail.com <span>→</span></a>
+        <a href="https://instagram.com/mountainpine.media" target="_blank" rel="noopener">@mountainpine.media <span>→</span></a>
+        <a href="tel:+17753134243">(775) 313-4243 <span>→</span></a>
       </div>
     </div>
     <form class="form reveal" id="inquiry-form">
@@ -536,11 +537,11 @@
       ].join('\n');
 
       const subject = listing ? 'Shoot inquiry — ' + listing : 'Shoot inquiry';
-      window.location.href = 'mailto:book@mountain-pine-media.com' +
+      window.location.href = 'mailto:mtnpinemedia@gmail.com' +
         '?subject=' + encodeURIComponent(subject) +
         '&body=' + encodeURIComponent(body);
 
-      note.textContent = "Your email app should be opening — if nothing happened, write us at book@mountain-pine-media.com.";
+      note.textContent = "Your email app should be opening — if nothing happened, write us at mtnpinemedia@gmail.com.";
       note.classList.add('is-active');
     });
   })();

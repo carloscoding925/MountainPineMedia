@@ -138,7 +138,7 @@ The four films currently on the page. **DOM order is not visual order** — see 
 
 | DOM index | Vimeo id | Title | Caption | At rest |
 |---|---|---|---|---|
-| 0 (featured) | `1222570040` | Agent Introduction | 27-second intro reel | centre |
+| 0 (featured) | `1222570040` | Crystal - Agent Feature | 27-second intro reel | centre |
 | 1 | `1222570041` | Family Move In | 1-minute client story | right |
 | 2 | `1222570042` | Daisy — Agent Introduction | 29-second intro reel | **hidden** |
 | 3 | `1222570043` | Listing Reel | 43-second walkthrough | left |
@@ -225,7 +225,7 @@ magick mark512.png \
 
 ## Contact form
 
-There's no backend, so the inquiry form doesn't POST anywhere. On submit it builds a `mailto:book@mountain-pine-media.com` link with the name, brokerage, email, listing address, and notes formatted into the body, then hands off to the visitor's mail client. The note under the button says so plainly, and names the address as a fallback in case no mail client is registered.
+There's no backend, so the inquiry form doesn't POST anywhere. On submit it builds a `mailto:mtnpinemedia@gmail.com` link with the name, brokerage, email, listing address, and notes formatted into the body, then hands off to the visitor's mail client. The note under the button says so plainly, and names the address as a fallback in case no mail client is registered.
 
 If a real form endpoint is ever wanted, the natural fit is a Cloudflare Worker route alongside the static assets, or a third-party form service — but the `mailto:` path keeps the site fully static today.
 
