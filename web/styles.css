@@ -418,8 +418,19 @@ section{padding:110px 0;}
 .price-card.feat{background:var(--lake-deep); color:var(--alpine-white); border-color:var(--lake-deep);}
 .price-card .tier-mk{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--brass);}
 .price-card h3{font-size:26px; margin-top:14px;}
-.price-card .desc{font-size:13.5px; color:var(--lake-mid); margin-top:8px; min-height:38px;}
+.price-card .desc{font-size:13.5px; color:var(--lake-mid); margin-top:8px; min-height:41px;}
 .price-card.feat .desc{color:var(--sage);}
+/* Price block — mirrors the Lake & Pine package tile: a large serif figure, a
+   small mono qualifier under it, and a rule closing the block off from the
+   feature list. Colours flip on .feat exactly the way .desc above does. */
+.price-card .amount{font-family:'Fraunces',serif; font-size:48px; font-weight:600; line-height:1; color:var(--ink); margin-top:22px;}
+.price-card.feat .amount{color:var(--alpine-white);}
+.price-card .per{font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--lake-mid); margin-top:8px;}
+.price-card.feat .per{color:var(--sage);}
+/* --stone reads as a hairline on the light cards; the featured card is on
+   --lake-deep, where --line is the light-on-dark equivalent used site-wide. */
+.price-card .rule{height:1px; background:var(--stone); margin-top:26px;}
+.price-card.feat .rule{background:var(--line);}
 .price-card ul{list-style:none; margin-top:26px; display:flex; flex-direction:column; gap:11px; flex:1;}
 .price-card li{font-size:14px; padding-left:18px; position:relative;}
 .price-card li::before{content:'—'; position:absolute; left:0; color:var(--brass);}
