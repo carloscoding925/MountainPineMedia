@@ -120,6 +120,21 @@ Swipe listeners live on `.cine-track`, but a cross-origin iframe consumes the po
 
 Navigation needs horizontal intent — more than 40px of travel *and* more horizontal than vertical — so a diagonal flick while scrolling past the section doesn't move the carousel.
 
+### Why the films used to play muted on a phone
+
+Both ways of starting a film went through `postMessage`, and **user activation does not cross an origin boundary**. The player therefore saw a programmatic play, the browser's autoplay policy withheld sound, and Vimeo fell back to muted playback rather than not playing at all.
+
+It only showed up on a phone because the two affected paths are the mobile ones:
+
+- **The carousel.** `.cine-swipe` exists only under `@media(pointer:coarse)`, so on desktop a tap lands inside the iframe and is a real gesture in Vimeo's own origin. On a phone our layer intercepts it and relays `{method:'play'}` instead. This is also why it was intermittent rather than constant — the layer stops 46px short of the bottom, so a tap on Vimeo's exposed control bar *is* an in-frame gesture and played with sound, while a tap in the middle did not.
+- **The lightbox.** `autoplay=1` on a freshly created iframe is only ever granted muted on mobile.
+
+The fix is to send `setMuted:false` alongside the play we initiate. **`setMuted`, not `setVolume`** — Vimeo documents `setVolume` as silently ignored on iOS and Android, where volume belongs to the system, so it fails without an error.
+
+The carousel unmutes only the *first* time a given slide is started (tracked in a `WeakSet`), so someone who deliberately mutes with Vimeo's own control isn't overridden on the next tap. The lightbox unmutes on player load and once more on its first `play` event, because the muted fallback can land after `load`.
+
+Playing muted is the browser's designed fallback, so this cannot be fully verified on desktop — desktop grants unmuted autoplay and never enters the failing state. Confirm on a real handset.
+
 The films are **hosted on Vimeo, not self-hosted** — the same call Lake & Pine made, and here it is forced. Cloudflare Workers static assets cap an individual file at **25 MiB** on every plan, and the source films are 74–244 MB of 4K portrait footage. Getting them under that ceiling means transcoding to roughly 1080×1920 and giving up adaptive bitrate; Vimeo sidesteps the limit, keeps ~500 MB of video out of the repository, and serves an appropriate rendition per connection.
 
 ### Swapping in a film
@@ -138,7 +153,7 @@ The four films currently on the page. **DOM order is not visual order** — see 
 
 | DOM index | Vimeo id | Title | Caption | At rest |
 |---|---|---|---|---|
-| 0 (featured) | `1222570040` | Agent Introduction | 27-second intro reel | centre |
+| 0 (featured) | `1222570040` | Crystal - Agent Feature | 27-second intro reel | centre |
 | 1 | `1222570041` | Family Move In | 1-minute client story | right |
 | 2 | `1222570042` | Daisy — Agent Introduction | 29-second intro reel | **hidden** |
 | 3 | `1222570043` | Listing Reel | 43-second walkthrough | left |
@@ -225,7 +240,7 @@ magick mark512.png \
 
 ## Contact form
 
-There's no backend, so the inquiry form doesn't POST anywhere. On submit it builds a `mailto:book@mountain-pine-media.com` link with the name, brokerage, email, listing address, and notes formatted into the body, then hands off to the visitor's mail client. The note under the button says so plainly, and names the address as a fallback in case no mail client is registered.
+There's no backend, so the inquiry form doesn't POST anywhere. On submit it builds a `mailto:mtnpinemedia@gmail.com` link with the name, brokerage, email, listing address, and notes formatted into the body, then hands off to the visitor's mail client. The note under the button says so plainly, and names the address as a fallback in case no mail client is registered.
 
 If a real form endpoint is ever wanted, the natural fit is a Cloudflare Worker route alongside the static assets, or a third-party form service — but the `mailto:` path keeps the site fully static today.
 
