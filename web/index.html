@@ -569,13 +569,24 @@
     let activeIndex = featured === -1 ? Math.floor(count / 2) : featured;
     let placed = slides.map(() => 0);
 
-    function post(slide, method, value) {
-      const iframe = slide && slide.querySelector('iframe');
+    function postTo(iframe, method, value) {
       if (!iframe || !iframe.contentWindow) return;
       const msg = { method: method };
       if (value !== undefined) msg.value = value;
       iframe.contentWindow.postMessage(JSON.stringify(msg), 'https://player.vimeo.com');
     }
+
+    function post(slide, method, value) {
+      postTo(slide && slide.querySelector('iframe'), method, value);
+    }
+
+    // A play sent over postMessage carries no user activation into the player's origin,
+    // so the autoplay policy treats it as programmatic and Vimeo falls back to muted
+    // playback rather than not playing at all. Explicitly unmuting alongside the play
+    // is what restores sound. setMuted rather than setVolume: volume is system-owned on
+    // phones, where Vimeo documents the call as silently ignored.
+    function unmute(iframe) { postTo(iframe, 'setMuted', false); }
+    const unmuted = new WeakSet();
 
     function pauseSlide(slide) {
       post(slide, 'pause');
@@ -589,6 +600,10 @@
     function togglePlay(slide) {
       const on = playing.get(slide) === true;
       post(slide, on ? 'pause' : 'play');
+      if (!on && slide && !unmuted.has(slide)) {
+        unmute(slide.querySelector('iframe'));
+        unmuted.add(slide);
+      }
       playing.set(slide, !on);
     }
     slides.forEach((slide) => {
@@ -604,6 +619,11 @@
       let data;
       try { data = JSON.parse(e.data); } catch (_) { return; }
       if (data.event !== 'play' && data.event !== 'pause') return;
+      const lbFrame = shell.querySelector('iframe');
+      if (lbFrame && lbFrame.contentWindow === e.source) {
+        if (data.event === 'play' && lbNeedsUnmute) { unmute(lbFrame); lbNeedsUnmute = false; }
+        return;
+      }
       const slide = slides.find((s) => {
         const f = s.querySelector('iframe');
         return f && f.contentWindow === e.source;
@@ -706,6 +726,7 @@
     const lbTitle = document.getElementById('cineLbTitle');
     const lbDetail = document.getElementById('cineLbDetail');
     let lastTrigger = null;
+    let lbNeedsUnmute = false;
 
     // iOS Safari has no Fullscreen API for arbitrary elements — the lightbox is already
     // near-fullscreen there, and Vimeo's own control still works inside it.
@@ -732,6 +753,14 @@
       frame.title = name;
       frame.allow = 'autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media';
       frame.allowFullscreen = true;
+      // autoplay=1 is only ever granted muted on a phone — the policy withholds sound
+      // from a player that has had no gesture of its own. Unmute once the player is up,
+      // and again on its first play, since the muted fallback lands after load.
+      lbNeedsUnmute = true;
+      frame.addEventListener('load', () => {
+        postTo(frame, 'addEventListener', 'play');
+        unmute(frame);
+      });
       shell.appendChild(frame);
 
       lastTrigger = trigger;
