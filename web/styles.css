@@ -559,14 +559,17 @@ section{padding:110px 0;}
 .area::before{background-image:url('optimized-assets/DJI_0194.jpg');}
 /* Stacked layout gets a different *frame*, not just a different size. The landscape
    aerial is hopeless in a ~390x970 section: `cover` is height-limited there, so only
-   about a fifth of its width survives, and that fifth is roof. This export is the same
-   photograph rotated 90° left into portrait and cropped to the patio, so the frame
-   fits the section — ~46% of its width shows instead.
-   The patio sits ~38% down the crop on purpose. Scrolling down moves the layer down,
-   which walks the visible window *up* through the image, so the patio starts near the
-   top of the frame and settles to centre as the section is passed, and the dull scrub
-   along the bottom scrolls away rather than sitting there. Re-cropping this image
-   means re-checking that fraction, or the reveal inverts.
+   about a fifth of its width survives, and that fifth is roof. This is the same
+   photograph rotated 90° left into portrait — uncropped, so the whole property still
+   reads — and because the frame now roughly matches the section, ~46% of its width
+   shows instead of ~20%.
+   Note what the parallax does with it. Scrolling down moves the layer down, which
+   walks the visible window *up* through the image, so the top of the frame arrives
+   last: the patio is on screen from the start and the roof is what comes into view.
+   A tighter crop placing the patio high (~38% down) would reverse that and make the
+   patio the payoff, at the cost of losing the house — tried, and the whole property
+   won. Worth knowing before re-cropping this image, since the reveal follows from
+   where the subject sits.
    Breakpoint matches .area-inner's, so the frame changes exactly when the layout does. */
 @media(max-width:860px){
   .area::before{background-image:url('optimized-assets/DJI_0194-portrait-1200.jpg');}

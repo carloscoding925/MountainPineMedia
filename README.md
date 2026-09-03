@@ -204,7 +204,7 @@ Each background is **two exports**, swapped by viewport width rather than by DPR
 | Section | ≤860px | 861–1099px | ≥1100px |
 |---|---|---|---|
 | Hero | `DSC08587.jpg` 1600px, 248 KB | ← same | `DSC08587-2560.jpg` 2560px, 524 KB |
-| Service Area | `DJI_0194-patio-1200.jpg` **portrait**, 316 KB | `DJI_0194.jpg` 1600px, 296 KB | `DJI_0194-2200.jpg` 2200px, 516 KB |
+| Service Area | `DJI_0194-portrait-1200.jpg` **portrait**, 368 KB | `DJI_0194.jpg` 1600px, 296 KB | `DJI_0194-2200.jpg` 2200px, 516 KB |
 
 **Backgrounds use a different export recipe from gallery photos: bigger, and at a lower quality.** The gallery pipeline is 1600px at q82; these are 2200–2560px at q70–80. Lower quality is not a compromise here — a 0.74+ scrim compresses the tonal range enough that JPEG artifacts stop being visible. Compared side by side under the scrim, q78 and q66 of the aerial were indistinguishable, so it ships at q70 and saves ~320 KB against a q80 export of the same pixels.
 
@@ -218,21 +218,22 @@ The hero's pair is additionally preloaded from `<head>`, media-matched to the sa
 
 A landscape photo behind a tall narrow section is brutally cropped on a phone. At 390px wide the section is ~970px tall, `cover` is height-limited, and only about **a fifth** of the frame's width survives — which for the aerial was roof and nothing else.
 
-The Service Area answers that with a genuinely different crop below 860px: the same photograph **rotated 90° left into portrait** and cropped to the patio. Because the frame now roughly matches the section, ~46% of its width shows instead of ~20%.
+The Service Area answers that with a genuinely different frame below 860px: the same photograph **rotated 90° left into portrait**, uncropped. Because the frame now roughly matches the section, ~46% of its width shows instead of ~20%, and the whole property reads rather than a single roof.
 
 ```bash
 magick DJI_0194.jpg -auto-orient -rotate -90 \
-  -crop 1828x2756+610+1837 +repage \
   -resize 1200x -strip -interlace Plane -sampling-factor 4:2:0 -quality 70 \
-  ../web/optimized-assets/DJI_0194-patio-1200.jpg
+  ../web/optimized-assets/DJI_0194-portrait-1200.jpg
 ```
 
-**The patio sits ~38% down the crop deliberately, and that number is load-bearing.** Scrolling down translates the layer down, which walks the visible window *up* through the image — so content near the top arrives last. At 38% the patio starts near the top of the frame on entry and settles to centre by the time the section is passed, while the flat scrub along the bottom scrolls away instead of sitting there. Re-crop this image and the fraction has to be re-checked, or the reveal inverts and the patio is simply there from the start.
+**Where the subject sits decides what the parallax reveals.** Scrolling down translates the layer down, which walks the visible window *up* through the image — so whatever is near the top arrives last. Uncropped, the patio sits ~63% down, which means it is on screen from the start and the **roof** is what comes into view.
+
+A tighter crop was built and rejected: cropping to the patio and placing it ~38% down made the patio the payoff instead, but lost the house entirely and read as landscaping rather than a property. Showing the whole property won. Worth knowing before re-cropping this image — the reveal follows from where the subject lands, so a new crop needs that checked.
 
 Two things that follow:
 
 - **The breakpoint is 860px, matching `.area-inner`'s**, so the frame changes exactly when the layout does. It is deliberately not the 1100px used for the size swap — those two breakpoints answer different questions (*which shape* vs *how many pixels*).
-- **1200px wide, 316 KB** — near parity with the 1600px landscape file it replaces (296 KB), so the fix costs no meaningful weight. It is about 1.4× for a 390px phone rather than a full 2×, which is fine under a 0.82 scrim on a handset.
+- **1200px wide, 368 KB** against the 296 KB landscape file it replaces. About 1.4× for a 390px phone rather than a full 2×, which is fine under a 0.82 scrim on a handset.
 
 The hero is still landscape at every width, so it keeps this problem: at 390px it is ~987px tall and crops the same way. Giving it the same treatment is open work — it just needs a portrait crop worth looking at.
 
@@ -349,7 +350,9 @@ Source photos from the camera are typically 5–10 MB each — far larger than w
 
 3. Reference the new file from `index.html` using a path like `optimized-assets/your-photo.jpg`.
 
-This pipeline took the ten current listing photos from ~117 MB of originals down to ~4.8 MB web-ready across fourteen exports. Eight are actually on the page — the gallery six (~1.5 MB) plus the hero and Service Area backdrops — so a phone pulls roughly **2.1 MB** of imagery and a wide desktop **2.5 MB**, taking the larger backdrop pair instead. That is a lot, and it is a deliberate call for a photography studio: the imagery is the product. The backgrounds are where to claw it back if it ever needs to be — see the export recipe above.
+`optimized-assets/` holds **only what the page actually references** — twelve exports from eight photographs, ~3.9 MB. Anything not reachable from `index.html` or `styles.css` gets deleted rather than left lying around; the full-resolution originals stay in the project-root `assets/`, so a dropped export is one `magick` command away from coming back. (`DSC00171` and `DSC09181` were pruned this way — shot, exported, never placed.)
+
+A phone pulls roughly **2.2 MB** of that and a wide desktop **2.5 MB**, the difference being which backdrop pair each takes. That is a lot, and it is a deliberate call for a photography studio: the imagery is the product. The backgrounds are where to claw it back if it ever needs to be — see the export recipe above.
 
 ### Regenerating the icons
 
