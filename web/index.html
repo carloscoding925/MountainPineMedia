@@ -543,6 +543,52 @@
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
+  // Service-area map parallax — the photo drifts down as the page scrolls down, so it
+  // reads slower than everything around it. Only the ::before layer moves, via a custom
+  // property, which keeps this to a compositor transform and off the paint path.
+  (function () {
+    const map = document.querySelector('.area-map');
+    if (!map) return;
+    // Honour the same preference the reveals and the carousel do. Left alone, the
+    // layer stays at its resting centre and the panel is simply a static backdrop.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // Must match --parallax-overscan in styles.css: it's how much room the layer has
+    // above and below the frame, and therefore how far it may travel before an edge
+    // would show.
+    const OVERSCAN = 0.14;
+    let queued = false;
+    let onScreen = false;
+
+    function update() {
+      queued = false;
+      const r = map.getBoundingClientRect();
+      // +1 while the panel is still below the fold, -1 once it has cleared the top,
+      // measured centre-to-centre so the resting position is dead centre of the pass.
+      const progress = (r.top + r.height / 2 - window.innerHeight / 2) /
+                       ((window.innerHeight + r.height) / 2);
+      const clamped = Math.max(-1, Math.min(1, progress));
+      map.style.setProperty('--parallax', (-clamped * r.height * OVERSCAN).toFixed(1) + 'px');
+    }
+
+    function schedule() {
+      if (!onScreen || queued) return;
+      queued = true;
+      requestAnimationFrame(update);
+    }
+
+    // No reason to run the handler for the rest of the page. The margin starts it a
+    // little early so the layer is already in position when the panel appears.
+    new IntersectionObserver((entries) => {
+      onScreen = entries[0].isIntersecting;
+      if (onScreen) update();
+    }, { rootMargin: '150px 0px' }).observe(map);
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+    update();
+  })();
+
   // Inquiry form — there's no backend, so the form composes a mailto: instead of
   // posting anywhere. Everything the agent typed is carried into the draft.
   (function () {

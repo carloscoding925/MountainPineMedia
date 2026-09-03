@@ -126,7 +126,15 @@ The two longest labels — "Incline Village" and "Carson City" — end up on sep
 
 Coordinates are baked rather than applied with a `translate()` group on purpose: the right-edge budget above is measured against the raw 400-unit viewBox, and a shifted group would leave the numbers in the markup out from the space that budget is reasoned in.
 
-The source is 3:2 in a 1:1 frame, so `background-size:cover` crops about a third of its width; centred keeps the glass wall and the ridgeline behind it.
+### The parallax
+
+The photo drifts down as the page scrolls down, so it reads about **10% slower** than everything around it. The panel is three layers: `::before` is the photo and the only thing that moves, `::after` is the scrim, and the SVG rides above both on `z-index:2`. Because the scrim sits *above* the moving photo, label contrast is identical at every scroll offset.
+
+Only a custom property changes per frame — `--parallax`, consumed by a `translate3d` on `::before` — so this stays a compositor transform and never touches paint. The handler is rAF-coalesced and an `IntersectionObserver` gates it, so nothing runs while the panel is off screen. It bails entirely under `prefers-reduced-motion`; with no JS at all the layer simply rests at its centre, which is why the transform reads `var(--parallax, 0px)`.
+
+**The travel is not free, and this is the thing to know before changing the photo.** The source is 3:2 in a 1:1 frame, so `cover` already fits it by height with *nothing spare vertically* — a vertical parallax has to manufacture that slack. `--parallax-overscan` (14%) grows the photo layer past the frame top and bottom, and the cost is a tighter crop: about **52%** of the source width is visible now, against **67%** for a static backdrop. Pushing the effect harder tightens it further, fast. `OVERSCAN` in the script must match `--parallax-overscan` in the stylesheet — it is what sizes the travel, and if the script's value is the larger of the two an empty edge slides into frame at the extremes.
+
+Measured at a 1920×929 viewport with a 528px panel: 73.9px of travel each way, 147.8px end to end.
 
 ## Cinematography
 
