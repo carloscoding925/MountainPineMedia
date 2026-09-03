@@ -7,6 +7,14 @@
   --ink:#16232A;
   --sage:#7F9AA3;
   --line: rgba(246,244,238,0.16);
+  /* Lifted variants for type sitting on photography (.hero, .area). Not a second
+     palette — same hues, raised in lightness. Needed because no amount of scrim
+     fixes them: brass tops out at 4.62:1 even against solid --lake-deep, so small
+     brass text over an image cannot reach AA unless the colour itself moves. Both
+     are tuned against the measured ground under the actual text, and both restore
+     roughly the contrast their base token gets on a flat --lake-deep section. */
+  --brass-on-photo:#D3A55C;
+  --sage-on-photo:#A6BCC3;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
@@ -77,18 +85,77 @@ header.scrolled nav.wrap{height:62px;}
   .nav-menu{padding:8px 20px 24px;}
 }
 
+/* PARALLAX SCAFFOLDING — shared by .hero and .area, both of which sit on a photo
+   that drifts down as the page scrolls down so it reads slower than the content.
+   Each section supplies its own background-image and its own scrim; everything
+   structural is here.
+   --parallax-overscan is the slack the travel comes out of: it grows the photo layer
+   past the section's top and bottom so there is somewhere to move to. It must stay
+   >= TRAVEL in the script, which is the fraction actually travelled; the 2 points
+   between them are margin, because at equal values the layer's edge lands exactly
+   flush at the extremes and sub-pixel rounding can flash a hairline.
+   Sections opt in with a data-parallax attribute, which is also what the script
+   queries — a section styled here but not marked there just sits at rest. */
+[data-parallax]{--parallax-overscan:16%; position:relative; overflow:hidden;}
+[data-parallax]::before{
+  content:''; position:absolute; left:0; right:0; z-index:0;
+  top:calc(-1 * var(--parallax-overscan)); bottom:calc(-1 * var(--parallax-overscan));
+  background-position:center; background-size:cover; background-repeat:no-repeat;
+  /* Set per-frame by the script; 0 is the resting centre, and the reduced-motion
+     and no-JS cases both simply stay there. */
+  transform:translate3d(0, var(--parallax, 0px), 0);
+  will-change:transform;
+}
+[data-parallax]::after{content:''; position:absolute; inset:0; z-index:1;}
+
 /* HERO */
 .hero{
   position:relative; min-height:100vh; background:var(--lake-deep); color:var(--alpine-white);
   display:flex; align-items:center; overflow:hidden; padding:74px 0 0;
 }
-.contour-field{position:absolute; inset:0; opacity:0.5;}
-.hero-inner{position:relative; z-index:2; padding-top:80px; padding-bottom:56px;}
+/* Swapping this photo means all four of: both exports, both rules here, the two
+   preload hints in <head> that mirror them, and the scrim below — which is tuned to
+   this frame's bright left-hand window wall and does not transfer. */
+.hero::before{background-image:url('optimized-assets/DSC08587.jpg');}
+@media(min-width:1100px){
+  .hero::before{background-image:url('optimized-assets/DSC08587-2560.jpg');}
+}
+/* Heavier than the Service Area's scrim: this carries the h1 and the lede, and the
+   contour linework above it is hairline white at 0.08–0.2 opacity, which needs a
+   genuinely dark ground to register at all. Left-weighted for the same reason as
+   the Service Area — the copy is left-aligned and the right side is open. */
+.hero::after{
+  background:
+    linear-gradient(to right, rgba(20,41,58,0.60) 0%, rgba(20,41,58,0.28) 50%, rgba(20,41,58,0) 100%),
+    linear-gradient(to bottom, rgba(20,41,58,0.80), rgba(20,41,58,0.84));
+}
+/* The h1 is 74px of bold white and holds on its own. Everything smaller does not:
+   the lede, the badge caption and the scroll cue are 12–17px against a photo whose
+   content changes under them as the layer drifts. */
+.hero .eyebrow,
+.hero p.lede,
+.turn-badge .lbl,
+.turn-badge .num,
+.scroll-cue{text-shadow:0 1px 4px rgba(13,30,41,0.7);}
+/* Measured against the ground beneath each one: base brass gave the eyebrow 2.88:1
+   and base sage gave the badge caption 3.23:1 on their bright patches, both short of
+   AA. Lifted they run 4.1–4.9:1, near the 4.62/5.01 those tokens get on flat navy. */
+.hero .eyebrow,
+.hero .turn-badge .num{color:var(--brass-on-photo);}
+.hero .turn-badge .lbl,
+.hero .scroll-cue{color:var(--sage-on-photo);}
+.hero h1{text-shadow:0 2px 12px rgba(13,30,41,0.35);}
+/* The four layers, bottom to top: photo (0), scrim (1), linework (2), copy (3).
+   The linework has to clear the scrim — under it, hairlines at 0.08 opacity are
+   simply gone — and it is a real element rather than a pseudo, so it needs its own
+   z-index to outrank ::after, which is generated last and would otherwise win. */
+.contour-field{position:absolute; inset:0; z-index:2; opacity:0.5;}
+.hero-inner{position:relative; z-index:3; padding-top:80px; padding-bottom:56px;}
 .eyebrow{
   font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.12em; text-transform:uppercase;
   color:var(--brass); margin-bottom:22px; display:flex; align-items:center; gap:10px;
 }
-.eyebrow::before{content:''; width:26px; height:1px; background:var(--brass);}
+.eyebrow::before{content:''; width:26px; height:1px; background:currentColor;}
 .hero h1{
   font-size:clamp(40px,6vw,74px); line-height:1.03; max-width:820px; font-weight:600;
 }
@@ -479,49 +546,70 @@ section{padding:110px 0;}
 .price-card.feat .cta:hover{opacity:0.85;}
 
 /* SERVICE AREA */
-.area{background:var(--alpine-white);}
+/* The whole section is the listing photo. Structure comes from [data-parallax]
+   above; what's here is this section's own image, scrim and palette. */
+.area{
+  color:var(--alpine-white);
+  /* Under the photo, so a slow image never flashes the section white. */
+  background:var(--lake-deep);
+  /* .contact below is near-solid --lake-deep, and the bottom of the scrim is close
+     enough to it that the seam disappears without a hairline to mark it. */
+  border-bottom:1px solid var(--line);
+}
+.area::before{background-image:url('optimized-assets/DJI_0194.jpg');}
+/* Full-bleed, the 1600px export is upscaled past its own width on any normal
+   desktop and goes soft. Swapped by viewport rather than by DPR: what this
+   background is short of is CSS pixels across, not device pixels. */
+@media(min-width:1100px){
+  .area::before{background-image:url('optimized-assets/DJI_0194-2200.jpg');}
+}
+/* The scrim is not decoration: everything over it — body copy, hairline chips, the
+   map's dots — vanishes on the photo unfilled. It sits above the moving photo, so
+   contrast is identical at every scroll offset.
+   No horizontal weighting, unlike the hero. Measured over the band this section
+   actually shows, the copy's half and the map's half come out at 0.392 and 0.421 mean
+   luminance — near enough identical, so there is no bright side to lean against. The
+   only real variation is vertical: the middle third (0.439, the roof) is brighter than
+   the top and bottom (0.363 / 0.355), which is what the centre stop answers. The foot
+   is the lightest so the photo still reads at the seam with .contact.
+   0.74 is solved, not picked: against --stone it clears 5.9:1 on a bright patch and
+   4.8:1 on a specular one, both past AA, while staying light enough to leave the
+   aerial legible as an aerial. */
+.area::after{
+  background:linear-gradient(to bottom,
+    rgba(20,41,58,0.74) 0%, rgba(20,41,58,0.78) 50%, rgba(20,41,58,0.72) 100%);
+}
+/* Stacked layout crops to a narrow vertical slice of the frame, and the copy runs the
+   full width over whatever that slice happens to contain. A little more cover. */
+@media(max-width:860px){
+  .area::after{background:linear-gradient(to bottom, rgba(20,41,58,0.82), rgba(20,41,58,0.78));}
+}
+/* The scrim evens the photo out but can't flatten it, and unlike a flat section the
+   ground under a given line of type changes as the layer drifts. The shadow is what
+   makes the copy hold at every scroll offset — same reasoning as the map labels. */
+.area .section-eyebrow,
+.area h2,
+.area-lede{text-shadow:0 1px 4px rgba(13,30,41,0.6);}
+.area .section-eyebrow{color:var(--brass-on-photo);}
+.area .wrap{position:relative; z-index:2;}
 .area-inner{display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;}
 @media(max-width:860px){.area-inner{grid-template-columns:1fr;}}
-/* The map sits on a listing photo rather than a flat fill, and the photo drifts
-   against the page as the panel crosses the viewport so it reads slower than the
-   scroll. Three layers, bottom to top: ::before is the photo and the only thing
-   that moves, ::after is the scrim, and the SVG rides above both.
-   The travel has to come from somewhere. The source is 3:2 in a 1:1 frame, so
-   `cover` already fits it by height with nothing spare vertically — --parallax-overscan
-   buys that slack by growing the photo layer past the frame top and bottom, and the
-   cost is a little more width cropped than a static backdrop would need. The script
-   reads the same fraction to size its travel, so the two have to stay in sync. */
-.area-map{
-  --parallax-overscan:14%;
-  aspect-ratio:1/1; position:relative; overflow:hidden;
-  border:1px solid var(--stone);
-  /* Painted under the photo, so a slow image never flashes the section white. */
-  background:var(--lake-deep);
-}
-.area-map::before{
-  content:''; position:absolute; left:0; right:0;
-  top:calc(-1 * var(--parallax-overscan)); bottom:calc(-1 * var(--parallax-overscan));
-  background:url('optimized-assets/DSC08587.jpg') center / cover no-repeat;
-  /* Set per-frame by the script; 0 is the resting centre, and the reduced-motion
-     and no-JS cases both simply stay there. */
-  transform:translate3d(0, var(--parallax, 0px), 0);
-  will-change:transform;
-}
-/* The scrim is not decoration: the photo is a bright interior, and the dots and
-   labels are hairline marks that vanish over it unfilled. Two stops rather than one
-   flat wash so the panel still reads as lit from above, the way .stat-block does.
-   It sits above the moving photo, so contrast is identical at every scroll offset. */
-.area-map::after{
-  content:''; position:absolute; inset:0; z-index:1;
-  background:linear-gradient(to bottom, rgba(20,41,58,0.74), rgba(20,41,58,0.88));
-}
-.area-map svg{position:relative; z-index:2; display:block; width:100%; height:100%;}
+.area-lede{margin-top:16px; color:var(--stone); font-size:15.5px; max-width:440px;}
+/* No photo of its own any more — the section carries it. What's left is the frame
+   that gives the dots a coordinate space to sit in. --line rather than --stone: the
+   panel is on a dark ground now, the same swap .price-card.feat makes. */
+.area-map{aspect-ratio:1/1; position:relative; border:1px solid var(--line);}
+.area-map svg{display:block; width:100%; height:100%;}
 /* The scrim evens out the photo but can't flatten it — a label can still land on a
    bright sill or a pendant lamp, and now a different one at every scroll position.
    The shadow is what makes the type reliable there. */
 .area-map svg text{text-shadow:0 1px 3px rgba(13,30,41,0.85);}
 .area-tags{display:flex; flex-wrap:wrap; gap:10px; margin-top:28px;}
-.area-tag{font-family:'IBM Plex Mono',monospace; font-size:12.5px; padding:8px 14px; border:1px solid var(--stone); border-radius:20px; color:var(--lake-mid);}
+.area-tag{
+  font-family:'IBM Plex Mono',monospace; font-size:12.5px; padding:8px 14px;
+  border:1px solid var(--line); border-radius:20px; color:var(--stone);
+  background:rgba(20,41,58,0.45); backdrop-filter:blur(3px);
+}
 
 /* CTA / CONTACT */
 .contact{background:var(--lake-deep); color:var(--alpine-white);}
