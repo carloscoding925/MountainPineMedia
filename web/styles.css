@@ -557,6 +557,20 @@ section{padding:110px 0;}
   border-bottom:1px solid var(--line);
 }
 .area::before{background-image:url('optimized-assets/DJI_0194.jpg');}
+/* Stacked layout gets a different *frame*, not just a different size. The landscape
+   aerial is hopeless in a ~390x970 section: `cover` is height-limited there, so only
+   about a fifth of its width survives, and that fifth is roof. This export is the same
+   photograph rotated 90° left into portrait and cropped to the patio, so the frame
+   fits the section — ~46% of its width shows instead.
+   The patio sits ~38% down the crop on purpose. Scrolling down moves the layer down,
+   which walks the visible window *up* through the image, so the patio starts near the
+   top of the frame and settles to centre as the section is passed, and the dull scrub
+   along the bottom scrolls away rather than sitting there. Re-cropping this image
+   means re-checking that fraction, or the reveal inverts.
+   Breakpoint matches .area-inner's, so the frame changes exactly when the layout does. */
+@media(max-width:860px){
+  .area::before{background-image:url('optimized-assets/DJI_0194-portrait-1200.jpg');}
+}
 /* Full-bleed, the 1600px export is upscaled past its own width on any normal
    desktop and goes soft. Swapped by viewport rather than by DPR: what this
    background is short of is CSS pixels across, not device pixels. */

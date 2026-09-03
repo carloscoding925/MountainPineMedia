@@ -201,10 +201,10 @@ The hero's contour field is kept, and it has to clear the scrim — under it, ha
 
 Each background is **two exports**, swapped by viewport width rather than by DPR — what a full-bleed background runs short of is CSS pixels across, not device pixels. A 1600px file is fine inside a half-width panel but is upscaled past its own width across a 1920px viewport and goes visibly soft.
 
-| Section | Below 1100px | 1100px and up |
-|---|---|---|
-| Hero | `DSC08587.jpg` 1600px, 248 KB | `DSC08587-2560.jpg` 2560px, 524 KB |
-| Service Area | `DJI_0194.jpg` 1600px, 296 KB | `DJI_0194-2200.jpg` 2200px, 516 KB |
+| Section | ≤860px | 861–1099px | ≥1100px |
+|---|---|---|---|
+| Hero | `DSC08587.jpg` 1600px, 248 KB | ← same | `DSC08587-2560.jpg` 2560px, 524 KB |
+| Service Area | `DJI_0194-patio-1200.jpg` **portrait**, 316 KB | `DJI_0194.jpg` 1600px, 296 KB | `DJI_0194-2200.jpg` 2200px, 516 KB |
 
 **Backgrounds use a different export recipe from gallery photos: bigger, and at a lower quality.** The gallery pipeline is 1600px at q82; these are 2200–2560px at q70–80. Lower quality is not a compromise here — a 0.74+ scrim compresses the tonal range enough that JPEG artifacts stop being visible. Compared side by side under the scrim, q78 and q66 of the aerial were indistinguishable, so it ships at q70 and saves ~320 KB against a q80 export of the same pixels.
 
@@ -214,7 +214,27 @@ The aerial needs that headroom more than the interior did: it is dense high-freq
 
 The hero's pair is additionally preloaded from `<head>`, media-matched to the same 1100px breakpoint, because a CSS background is only discovered once the stylesheet has parsed — too late for something above the fold. **Those hints have to be kept in step with the CSS**; a stale preload silently fetches an image nothing uses and leaves the real one late.
 
-A landscape photo behind a tall narrow section is heavily cropped on a phone — at 390px wide the hero is ~987px tall and the Service Area ~970px, and only about a fifth of the frame's width survives in each. That is inherent to the aspect mismatch, not to the parallax.
+### Stacked layouts want a different frame, not a smaller file
+
+A landscape photo behind a tall narrow section is brutally cropped on a phone. At 390px wide the section is ~970px tall, `cover` is height-limited, and only about **a fifth** of the frame's width survives — which for the aerial was roof and nothing else.
+
+The Service Area answers that with a genuinely different crop below 860px: the same photograph **rotated 90° left into portrait** and cropped to the patio. Because the frame now roughly matches the section, ~46% of its width shows instead of ~20%.
+
+```bash
+magick DJI_0194.jpg -auto-orient -rotate -90 \
+  -crop 1828x2756+610+1837 +repage \
+  -resize 1200x -strip -interlace Plane -sampling-factor 4:2:0 -quality 70 \
+  ../web/optimized-assets/DJI_0194-patio-1200.jpg
+```
+
+**The patio sits ~38% down the crop deliberately, and that number is load-bearing.** Scrolling down translates the layer down, which walks the visible window *up* through the image — so content near the top arrives last. At 38% the patio starts near the top of the frame on entry and settles to centre by the time the section is passed, while the flat scrub along the bottom scrolls away instead of sitting there. Re-crop this image and the fraction has to be re-checked, or the reveal inverts and the patio is simply there from the start.
+
+Two things that follow:
+
+- **The breakpoint is 860px, matching `.area-inner`'s**, so the frame changes exactly when the layout does. It is deliberately not the 1100px used for the size swap — those two breakpoints answer different questions (*which shape* vs *how many pixels*).
+- **1200px wide, 316 KB** — near parity with the 1600px landscape file it replaces (296 KB), so the fix costs no meaningful weight. It is about 1.4× for a 390px phone rather than a full 2×, which is fine under a 0.82 scrim on a handset.
+
+The hero is still landscape at every width, so it keeps this problem: at 390px it is ~987px tall and crops the same way. Giving it the same treatment is open work — it just needs a portrait crop worth looking at.
 
 ## Cinematography
 
@@ -329,7 +349,7 @@ Source photos from the camera are typically 5–10 MB each — far larger than w
 
 3. Reference the new file from `index.html` using a path like `optimized-assets/your-photo.jpg`.
 
-This pipeline took the ten current listing photos from ~117 MB of originals down to ~4.5 MB web-ready across thirteen exports. Eight are actually on the page — the gallery six (~1.5 MB) plus the hero and Service Area backdrops — so a phone pulls roughly **2.1 MB** of imagery and a wide desktop **2.5 MB**, taking the larger backdrop pair instead. That is a lot, and it is a deliberate call for a photography studio: the imagery is the product. The backgrounds are where to claw it back if it ever needs to be — see the export recipe above.
+This pipeline took the ten current listing photos from ~117 MB of originals down to ~4.8 MB web-ready across fourteen exports. Eight are actually on the page — the gallery six (~1.5 MB) plus the hero and Service Area backdrops — so a phone pulls roughly **2.1 MB** of imagery and a wide desktop **2.5 MB**, taking the larger backdrop pair instead. That is a lot, and it is a deliberate call for a photography studio: the imagery is the product. The backgrounds are where to claw it back if it ever needs to be — see the export recipe above.
 
 ### Regenerating the icons
 
