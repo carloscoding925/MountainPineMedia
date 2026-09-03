@@ -10,7 +10,8 @@ The site is intentionally simple — no build step, no framework — so it stays
 
 - **HTML / CSS / vanilla JS** — single `index.html`, single `styles.css`, and one inline `<script>` covering the sticky-nav scroll state, the mobile hamburger toggle, reveal-on-scroll animations via `IntersectionObserver`, and the inquiry form's `mailto:` composition.
 - **Google Fonts** — Fraunces, Inter, and IBM Plex Mono, loaded via `<link rel="preconnect">` for fast first paint.
-- **Inline SVG** — the brand mark, the hero contour field, and the service-area map are all hand-drawn SVG rather than image files, so nothing above the fold waits on a network image. The **Recent Work** tiles are real photographs (see [Portfolio tiles](#portfolio-tiles)).
+- **Inline SVG** — the brand mark, the hero contour field, and the service-area map are all hand-drawn SVG rather than image files. The **Recent Work** tiles are real photographs (see [Portfolio tiles](#portfolio-tiles)).
+- **Photographic section backgrounds** — the hero and Service Area sit on a listing photo that parallaxes as the page scrolls (see [Parallax](#parallax)). This is a deliberate reversal of an older rule that nothing above the fold waited on a network image: the hero's backdrop is now a ~524 KB download, mitigated with a `<link rel="preload">` but not free. The hero still paints its `--lake-deep` ground immediately, so text is legible before the photo lands.
 - **Vimeo** — the listing films are embedded via Vimeo's iframe player rather than self-hosted. Not just a preference: Cloudflare caps a static asset at 25 MiB and the source films are 74–244 MB each (see [Cinematography](#cinematography)).
 - **Cloudflare Workers** — deployment target, using Workers static assets. Configured via [`wrangler.jsonc`](web/wrangler.jsonc) with `assets.directory: "."` so the `web/` folder is served as the site root.
 - **ImageMagick** — local CLI tool used to resize and recompress listing photos before deploy, and to generate the favicon set (see [Image workflow](#image-workflow)).
@@ -103,7 +104,138 @@ Gallery payload: **1.44 MB** on a 1× display, **1.73 MB** on 2×. If a differen
 
 Tiles zoom slightly on hover. Chrome rasterizes a layer at its layout size and then GPU-scales that bitmap, so a `scale()` on an un-promoted layer visibly softens until the browser re-rasterizes; `.pf-item img` sets `will-change:transform` under `@media(hover:hover)` so the layer is composited up front. The zoom is disabled entirely under `prefers-reduced-motion`.
 
-The service-area map is still a hand-drawn SVG with hardcoded city dots, not a mapping library — adding a town means adding a `<circle>` and a `<text>` in the same 400×400 coordinate space, plus a matching `.area-tag` chip above it.
+## Service Area
+
+The whole section is a listing photo, and it is the one place on the site where a photograph is the ground rather than the content. `.area` is three layers: `::before` is the photo and the only thing that moves, `::after` is the scrim, and `.wrap` rides above both on `z-index:2`.
+
+Everything in the section is therefore light-on-dark, the way `.contact` is. Two of those are easy to miss when editing:
+
+- **The lede is a class, not an inline style.** It used to carry `color:var(--lake-mid)` inline, which beats any stylesheet rule — it is `.area-lede` now precisely so the palette can be changed in one place.
+- **The chips have a ground.** `.area-tag` on a busy photo reads as stray strokes when it is only an outline, so it gets `rgba(20,41,58,0.45)` and a small blur, the same move `.pf-tag` makes over the gallery photos.
+
+### The map
+
+Still a hand-drawn SVG with hardcoded city dots, not a mapping library — adding a town means adding a `<circle>` and a `<text>` in the same 400×400 coordinate space, plus a matching `.area-tag` chip above it. The panel has **no photo of its own** — the section carries it, and `.area-map` is just the frame that gives the dots a coordinate space. Its border is `--line` rather than `--stone`, the light-on-dark swap `.price-card.feat` also makes.
+
+Three things follow from the map sitting on a photograph, and each one bit:
+
+- **The SVG has no background `<rect>`.** It used to open with `<rect width="400" height="400" fill="#F4F7F7"/>`, which is opaque and would hide the photo entirely.
+- **Dots and labels are the light-on-dark set** (`#F4F7F7` for Reno, `#D8E1E0` for the other six, contours at `#F4F7F7`/0.28), matching how `.portfolio` and `.stat-block` treat a `--lake-deep` ground. A new town added in the old dark colours will disappear. The scrim evens the photo out but can't flatten it, so `.area-map svg text` also carries a shadow for the labels that land on a bright sill or a pendant lamp.
+- **Watch the right edge.** IBM Plex Mono advances ~6 units per character at `font-size:10`, so a label placed to the right of a dot past about x=300 runs into the border — "Incline Village" is 15 characters, and when it sat on the right flank it ran to 398 of 400 and clipped. Nothing reaches that far now: Sparks is the rightmost label and still leaves 74px of frame at desktop.
+
+The seven nodes fall into two groups, which is both the real geography and what keeps the labels apart:
+
+| | Nodes (x, y) | Notes |
+|---|---|---|
+| Tahoe basin | Truckee (92, 130), Incline Village (120, 175), Tahoe (106, 255) | Staggered west to east, labels running right |
+| Valley towns | Reno (245, 185), Sparks (300, 160), Carson City (255, 280) | East of the lake, as they are on the ground |
+
+The basin three are deliberately not on a shared x — the stagger follows the real west-to-east order, Truckee being the westernmost and Incline Village the easternmost with the lake between. Incline gets the smaller push of the two: its label is the longest on the map, and every unit it moves right comes off the gap to Reno's dot, which is down to 30px at desktop.
+
+The two longest labels — "Incline Village" and "Carson City" — end up on separate flanks, so neither has to reach across the other.
+
+Coordinates are baked rather than applied with a `translate()` group on purpose: the right-edge budget above is measured against the raw 400-unit viewBox, and a shifted group would leave the numbers in the markup out from the space that budget is reasoned in.
+
+## Parallax
+
+Two sections sit on a photograph that drifts down as the page scrolls down, so it reads slower than the content on top of it: the **hero** and **Service Area**. A section opts in with a `data-parallax` attribute, which is both what the shared CSS block styles and what the script queries — a section styled but not marked simply sits at rest.
+
+Each section is layered, bottom to top: `::before` is the photo and the only thing that moves, `::after` is the scrim, and the content rides above. Because the scrim sits *above* the moving photo, contrast is identical at every scroll offset — copy never drifts into a bright patch.
+
+Only a custom property changes per frame — `--parallax`, consumed by a `translate3d` on `::before` — so this stays a compositor transform and never touches paint. One rAF-coalesced handler serves every section, and an `IntersectionObserver` keeps a `Set` of the ones actually on screen, so the hero costs nothing while you are reading the footer. It bails entirely under `prefers-reduced-motion`; with no JS at all the layers rest at their centres, which is why the transform reads `var(--parallax, 0px)`.
+
+**Two numbers, and they are not the same number.** `TRAVEL` in the script (0.14) is the fraction of a section's height the layer actually moves. `--parallax-overscan` in the stylesheet (16%) is how far the layer is grown past the section's top and bottom to have somewhere to move *to*. Overscan must stay **>= travel**; the two points between them are margin, because at equal values the layer's edge lands exactly flush at the extremes and sub-pixel rounding can flash a hairline. Set travel above overscan and an empty edge slides into frame.
+
+Measured at 1920×929:
+
+| Section | Height | Travel each way | Edge clearance at full travel | Effect |
+|---|---|---|---|---|
+| Hero | 929px | 130.1px | 18.5px | ~12.3% slower |
+| Service Area | 749px | 104.9px | 14.8px | ~12.5% slower |
+
+**The hero only ever spends half its travel.** It is at the top of the document, so it starts mid-pass at `--parallax: 0` rather than at the `+1` an incoming section gets, and can only drift downward from there. That is correct, not a bug.
+
+The overscan is free at these widths. Full-bleed, the box is far wider than the 3:2 source, so `cover` is limited by **width** — growing the layer taller crops nothing at all. That was not true when this lived on the square map panel, which was limited by height, where every point of overscan came straight off the visible width.
+
+### Scrims are per-section, and they are measured
+
+**The two scrims are shaped differently because the two photographs are.** They are not interchangeable, and swapping either image means re-deriving its scrim.
+
+- **Hero** (interior, `DSC08587`) — a vertical wash *plus a left-weighted pass*. The brightest thing in frame is the window wall on the left, which is exactly where the copy sits. It is also the heavier of the two overall, because the contour linework above it is hairline white at 0.08–0.2 opacity and needs a genuinely dark ground to register at all.
+- **Service Area** (aerial, `DJI_0194`) — a **flat three-stop vertical wash, no horizontal weighting**. Measured over the band the section actually shows, the copy's half and the map's half come out at 0.392 and 0.421 mean luminance: near enough identical, so there is no bright side to lean against. The only real variation is vertical — the middle third (0.439, the roof) against the top and bottom (0.363 / 0.355) — which is what the centre stop answers.
+
+The Service Area's `0.74` is solved rather than picked: against `--stone` it clears 5.9:1 on a bright patch and 4.8:1 on a specular one. The aerial is a much darker frame than the interior (0.386 mean overall), so it needs *less* cover, and gets to stay legible as an aerial.
+
+Below 860px both drop to one flat wash — stacked, the copy runs full-width over whatever a narrow vertical slice of the frame happens to contain, with no side to favour.
+
+Small type over a photo also carries a `text-shadow`, since the ground beneath a given line changes as the layer drifts. The hero h1 is 74px of bold white and holds on its own; everything below that size does not.
+
+### Brass and sage had to move
+
+`--brass` and `--sage` do not survive a photographic ground, and **no scrim fixes it**: `#B8863B` tops out at **4.62:1 even against solid `--lake-deep`**, so pushing the scrim to 0.94 still only reached 4.40:1 while destroying the photo. The colour itself has to move.
+
+So there are two lifted tokens — same hues, raised in lightness, used *only* where type sits on an image:
+
+| Token | Value | Replaces | Used on |
+|---|---|---|---|
+| `--brass-on-photo` | `#D3A55C` | `--brass` `#B8863B` | hero eyebrow + `24–48HR`, Service Area eyebrow, the map's Reno dot |
+| `--sage-on-photo` | `#A6BCC3` | `--sage` `#7F9AA3` | hero badge caption, scroll cue |
+
+Measured against the ground beneath the actual text (Range boxes, not the block's full width — the eyebrow's ink is 101px of a 528px block, and sits on a brighter patch than the block average):
+
+| Element | Base token | Lifted |
+|---|---|---|
+| Hero eyebrow | 2.88:1 | **4.12:1** |
+| Hero badge caption | 3.23:1 | **4.86:1** |
+| Service Area eyebrow | 2.79:1 | **3.99:1** |
+
+Those land near the 4.62:1 / 5.01:1 the base tokens get on a flat `--lake-deep` section, which is the bar — not perfection, but parity with the rest of the site. Everything else already cleared comfortably: h2 at 9.9:1, lede at 8.1:1, map labels at 8.7:1.
+
+**Flat sections keep the base tokens.** `.services`, `.pricing`, `.contact` and the footer are untouched. The lifted rules are scoped under `.hero` / `.area` — note that `.hero .turn-badge .num` needs that `.hero` prefix to outrank the base `.turn-badge .num`, which is equal specificity and later in the file.
+
+### The hero's linework
+
+The hero's contour field is kept, and it has to clear the scrim — under it, hairlines at 0.08 opacity are simply gone. It is a real element rather than a pseudo, so it needs an explicit `z-index` to outrank `::after`, which is generated last and would otherwise paint over it. The stack is **photo (0) → scrim (1) → linework (2) → copy (3)**, all four set explicitly.
+
+### The background asset
+
+Each background is **two exports**, swapped by viewport width rather than by DPR — what a full-bleed background runs short of is CSS pixels across, not device pixels. A 1600px file is fine inside a half-width panel but is upscaled past its own width across a 1920px viewport and goes visibly soft.
+
+| Section | ≤860px | 861–1099px | ≥1100px |
+|---|---|---|---|
+| Hero | `DSC08587.jpg` 1600px, 248 KB | ← same | `DSC08587-2560.jpg` 2560px, 524 KB |
+| Service Area | `DJI_0194-portrait-1200.jpg` **portrait**, 368 KB | `DJI_0194.jpg` 1600px, 296 KB | `DJI_0194-2200.jpg` 2200px, 516 KB |
+
+**Backgrounds use a different export recipe from gallery photos: bigger, and at a lower quality.** The gallery pipeline is 1600px at q82; these are 2200–2560px at q70–80. Lower quality is not a compromise here — a 0.74+ scrim compresses the tonal range enough that JPEG artifacts stop being visible. Compared side by side under the scrim, q78 and q66 of the aerial were indistinguishable, so it ships at q70 and saves ~320 KB against a q80 export of the same pixels.
+
+The aerial needs that headroom more than the interior did: it is dense high-frequency detail (shingles, gravel, foliage) and compresses badly — at q80/2560 it was 836 KB, against 524 KB for the interior at the same settings. 2200px rather than 2560px for the same reason; it still clears a 1920px viewport.
+
+`DJI_0194.jpg` was already in `optimized-assets/` as an unused gallery export and has been re-encoded to the background recipe. It is not referenced anywhere else — check before reusing it in the mosaic, where it would now be below pipeline quality.
+
+The hero's pair is additionally preloaded from `<head>`, media-matched to the same 1100px breakpoint, because a CSS background is only discovered once the stylesheet has parsed — too late for something above the fold. **Those hints have to be kept in step with the CSS**; a stale preload silently fetches an image nothing uses and leaves the real one late.
+
+### Stacked layouts want a different frame, not a smaller file
+
+A landscape photo behind a tall narrow section is brutally cropped on a phone. At 390px wide the section is ~970px tall, `cover` is height-limited, and only about **a fifth** of the frame's width survives — which for the aerial was roof and nothing else.
+
+The Service Area answers that with a genuinely different frame below 860px: the same photograph **rotated 90° left into portrait**, uncropped. Because the frame now roughly matches the section, ~46% of its width shows instead of ~20%, and the whole property reads rather than a single roof.
+
+```bash
+magick DJI_0194.jpg -auto-orient -rotate -90 \
+  -resize 1200x -strip -interlace Plane -sampling-factor 4:2:0 -quality 70 \
+  ../web/optimized-assets/DJI_0194-portrait-1200.jpg
+```
+
+**Where the subject sits decides what the parallax reveals.** Scrolling down translates the layer down, which walks the visible window *up* through the image — so whatever is near the top arrives last. Uncropped, the patio sits ~63% down, which means it is on screen from the start and the **roof** is what comes into view.
+
+A tighter crop was built and rejected: cropping to the patio and placing it ~38% down made the patio the payoff instead, but lost the house entirely and read as landscaping rather than a property. Showing the whole property won. Worth knowing before re-cropping this image — the reveal follows from where the subject lands, so a new crop needs that checked.
+
+Two things that follow:
+
+- **The breakpoint is 860px, matching `.area-inner`'s**, so the frame changes exactly when the layout does. It is deliberately not the 1100px used for the size swap — those two breakpoints answer different questions (*which shape* vs *how many pixels*).
+- **1200px wide, 368 KB** against the 296 KB landscape file it replaces. About 1.4× for a 390px phone rather than a full 2×, which is fine under a 0.82 scrim on a handset.
+
+The hero is still landscape at every width, so it keeps this problem: at 390px it is ~987px tall and crops the same way. Giving it the same treatment is open work — it just needs a portrait crop worth looking at.
 
 ## Cinematography
 
@@ -218,7 +350,9 @@ Source photos from the camera are typically 5–10 MB each — far larger than w
 
 3. Reference the new file from `index.html` using a path like `optimized-assets/your-photo.jpg`.
 
-This pipeline took the nine current listing photos from ~102 MB of originals down to ~2.8 MB web-ready (the six on the page total ~1.4 MB) with no visible quality loss.
+`optimized-assets/` holds **only what the page actually references** — twelve exports from eight photographs, ~3.9 MB. Anything not reachable from `index.html` or `styles.css` gets deleted rather than left lying around; the full-resolution originals stay in the project-root `assets/`, so a dropped export is one `magick` command away from coming back. (`DSC00171` and `DSC09181` were pruned this way — shot, exported, never placed.)
+
+A phone pulls roughly **2.2 MB** of that and a wide desktop **2.5 MB**, the difference being which backdrop pair each takes. That is a lot, and it is a deliberate call for a photography studio: the imagery is the product. The backgrounds are where to claw it back if it ever needs to be — see the export recipe above.
 
 ### Regenerating the icons
 

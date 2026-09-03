@@ -5,3 +5,4 @@
 # into the folder and can track .gitkeep, which preserves it in a fresh clone.
 assets/*
 !assets/.gitkeep
+TODO.md

@@ -41,6 +41,7 @@
     { "@type": "City", "name": "Gardnerville, Nevada" },
     { "@type": "City", "name": "Fernley, Nevada" },
     { "@type": "Place", "name": "Incline Village, Nevada" },
+    { "@type": "Place", "name": "Lake Tahoe" },
     { "@type": "Place", "name": "Truckee, California" },
     { "@type": "AdministrativeArea", "name": "Washoe County, Nevada" },
     { "@type": "Place", "name": "Northern Nevada" }
@@ -94,6 +95,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+
+<!-- The hero background is above the fold, so it is discovered in styles.css rather
+     than in the markup and would otherwise wait on the stylesheet. Keep this pair in
+     step with the .hero::before rules and their 1100px breakpoint. -->
+<link rel="preload" as="image" href="optimized-assets/DSC08587-2560.jpg" media="(min-width:1100px)">
+<link rel="preload" as="image" href="optimized-assets/DSC08587.jpg" media="(max-width:1099.98px)">
 </head>
 <body>
 
@@ -120,7 +127,7 @@
   </nav>
 </header>
 
-<section class="hero">
+<section class="hero" data-parallax>
   <svg class="contour-field" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
     <g stroke="#F4F7F7" stroke-width="1" fill="none">
       <path opacity="0.12" d="M-50 620 Q 200 560 350 600 T 700 560 T 1050 610 T 1300 580"/>
@@ -414,13 +421,13 @@
   </div>
 </section>
 
-<section class="area" id="area">
+<section class="area" id="area" data-parallax>
   <div class="wrap">
     <div class="area-inner">
       <div class="reveal">
         <div class="section-eyebrow">Service Area</div>
         <h2 style="font-size:clamp(28px,3.4vw,38px); margin-top:14px;">Reno to Carson Valley, and the towns between.</h2>
-        <p style="margin-top:16px; color:var(--lake-mid); font-size:15.5px; max-width:440px;">If it's in Northern Nevada's high desert, we already know how the light hits it.</p>
+        <p class="area-lede">If it's in Northern Nevada's high desert, we already know how the light hits it.</p>
         <div class="area-tags">
           <span class="area-tag">Reno</span>
           <span class="area-tag">Sparks</span>
@@ -429,27 +436,45 @@
           <span class="area-tag">Incline Village</span>
           <span class="area-tag">Truckee</span>
           <span class="area-tag">Fernley</span>
+          <span class="area-tag">Tahoe</span>
         </div>
       </div>
       <div class="area-map reveal">
+        <!-- No background rect: the photo and its scrim are the parent's background,
+             and an opaque fill here would hide both. Dots and labels are the
+             light-on-dark set for that reason. -->
         <svg viewBox="0 0 400 400">
-          <rect width="400" height="400" fill="#F4F7F7"/>
-          <g stroke="#D8E1E0" stroke-width="1" fill="none">
+          <g stroke="#F4F7F7" stroke-width="1" fill="none" opacity="0.28">
             <path d="M0 100 Q 130 130 220 90 T 400 110"/>
             <path d="M0 160 Q 140 190 230 150 T 400 170"/>
             <path d="M0 220 Q 150 250 240 210 T 400 230"/>
             <path d="M0 280 Q 160 310 250 270 T 400 290"/>
           </g>
-          <circle cx="140" cy="180" r="4" fill="#B8863B"/>
-          <text x="150" y="178" font-family="IBM Plex Mono" font-size="11" fill="#16232A">Reno</text>
-          <circle cx="205" cy="160" r="3" fill="#3E7488"/>
-          <text x="213" y="158" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Sparks</text>
-          <circle cx="180" cy="270" r="3" fill="#3E7488"/>
-          <text x="188" y="268" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Carson City</text>
-          <circle cx="300" cy="130" r="3" fill="#3E7488"/>
-          <text x="308" y="128" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Incline Village</text>
-          <circle cx="90" cy="130" r="3" fill="#3E7488"/>
-          <text x="98" y="128" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Truckee</text>
+          <!-- Two groups: the Tahoe basin stacked down the left at a shared x=105, and
+               the valley towns east of it. That split is the real geography — Reno,
+               Sparks and Carson City all sit east of the lake — and it keeps the two
+               longest labels ("Incline Village", "Carson City") on separate flanks so
+               neither has to reach across the other.
+               Coordinates are baked rather than wrapped in a translate() group on
+               purpose: the right-edge budget below is measured against the raw 400-unit
+               viewBox, and an offset group would put the numbers here out from the
+               space that budget is reasoned in. -->
+          <!-- Staggered west to east: Truckee really is the westernmost of the three and
+               Incline Village the easternmost, with the lake between them. Incline gets
+               the smaller push of the two — its label is the longest on the map, and
+               every unit it moves right is a unit off the gap to Reno's dot. -->
+          <circle cx="92" cy="130" r="3" fill="#D8E1E0"/>
+          <text x="100" y="128" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Truckee</text>
+          <circle cx="120" cy="175" r="3" fill="#D8E1E0"/>
+          <text x="128" y="173" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Incline Village</text>
+          <circle cx="106" cy="255" r="3" fill="#D8E1E0"/>
+          <text x="114" y="253" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Tahoe</text>
+          <circle cx="245" cy="185" r="4" fill="#D3A55C"/>
+          <text x="255" y="183" font-family="IBM Plex Mono" font-size="11" fill="#F4F7F7">Reno</text>
+          <circle cx="300" cy="160" r="3" fill="#D8E1E0"/>
+          <text x="308" y="158" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Sparks</text>
+          <circle cx="255" cy="280" r="3" fill="#D8E1E0"/>
+          <text x="263" y="278" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Carson City</text>
         </svg>
       </div>
     </div>
@@ -523,6 +548,61 @@
   }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Parallax — each opted-in section's photo drifts down as the page scrolls down, so
+  // it reads slower than the content on top of it. Only the ::before layer moves, via a
+  // custom property, which keeps this to a compositor transform and off the paint path.
+  (function () {
+    const sections = Array.from(document.querySelectorAll('[data-parallax]'));
+    if (!sections.length) return;
+    // Honour the same preference the reveals and the carousel do. Left alone, every
+    // layer stays at its resting centre and the sections are static backdrops.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    // How far a layer travels, as a fraction of its section's height. Must stay
+    // <= --parallax-overscan in styles.css, which is the room the layer actually has
+    // above and below the frame; the slack between them keeps a rounded edge from
+    // flashing at the extremes. Larger than it, and an empty edge slides into frame.
+    const TRAVEL = 0.14;
+    // Only the sections currently on screen. The hero and the service area are far
+    // apart, so this is usually one element and never all of them.
+    const live = new Set();
+    let queued = false;
+
+    function update() {
+      queued = false;
+      live.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        // +1 while the section is still below the fold, -1 once it has cleared the
+        // top, measured centre-to-centre so rest is dead centre of the pass. The hero
+        // starts mid-pass rather than at +1, being at the top of the document, so it
+        // only ever spends the downward half of its travel.
+        const progress = (r.top + r.height / 2 - window.innerHeight / 2) /
+                         ((window.innerHeight + r.height) / 2);
+        const clamped = Math.max(-1, Math.min(1, progress));
+        el.style.setProperty('--parallax', (-clamped * r.height * TRAVEL).toFixed(1) + 'px');
+      });
+    }
+
+    function schedule() {
+      if (!live.size || queued) return;
+      queued = true;
+      requestAnimationFrame(update);
+    }
+
+    // No reason to run the handler for the rest of the page. The margin starts a
+    // section early so its layer is already in position when it appears.
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) live.add(e.target); else live.delete(e.target);
+      });
+      if (live.size) update();
+    }, { rootMargin: '150px 0px' });
+    sections.forEach((el) => io.observe(el));
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+  })();
 
   // Inquiry form — there's no backend, so the form composes a mailto: instead of
   // posting anywhere. Everything the agent typed is carried into the draft.
