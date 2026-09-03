@@ -103,7 +103,30 @@ Gallery payload: **1.44 MB** on a 1× display, **1.73 MB** on 2×. If a differen
 
 Tiles zoom slightly on hover. Chrome rasterizes a layer at its layout size and then GPU-scales that bitmap, so a `scale()` on an un-promoted layer visibly softens until the browser re-rasterizes; `.pf-item img` sets `will-change:transform` under `@media(hover:hover)` so the layer is composited up front. The zoom is disabled entirely under `prefers-reduced-motion`.
 
-The service-area map is still a hand-drawn SVG with hardcoded city dots, not a mapping library — adding a town means adding a `<circle>` and a `<text>` in the same 400×400 coordinate space, plus a matching `.area-tag` chip above it.
+## Service-area map
+
+Still a hand-drawn SVG with hardcoded city dots, not a mapping library — adding a town means adding a `<circle>` and a `<text>` in the same 400×400 coordinate space, plus a matching `.area-tag` chip above it.
+
+It sits on a listing photo (`optimized-assets/DSC08587.jpg`) rather than a flat fill. Three things that follow from that, and each one bit:
+
+- **The SVG has no background `<rect>`.** It used to open with `<rect width="400" height="400" fill="#F4F7F7"/>`, which is opaque and would hide the photo entirely. The photo and its scrim are the *parent's* `background-image` — a two-stop navy gradient layered over the JPEG in one declaration, gradient first, since layers paint top-down.
+- **Dots and labels are the light-on-dark set** (`#F4F7F7` for Reno, `#D8E1E0` for the other six, contours at `#F4F7F7`/0.28), matching how `.portfolio` and `.stat-block` treat a `--lake-deep` ground. A new town added in the old dark colours will disappear. The scrim evens the photo out but can't flatten it, so `.area-map svg text` also carries a shadow for the labels that land on a bright sill or a pendant lamp.
+- **Watch the right edge.** IBM Plex Mono advances ~6 units per character at `font-size:10`, so a label placed to the right of a dot past about x=300 runs into the border — "Incline Village" is 15 characters, and when it sat on the right flank it ran to 398 of 400 and clipped. Nothing reaches that far now: Sparks is the rightmost label and still leaves 74px of frame at desktop.
+
+The seven nodes fall into two groups, which is both the real geography and what keeps the labels apart:
+
+| | Nodes (x, y) | Notes |
+|---|---|---|
+| Tahoe basin | Truckee (92, 130), Incline Village (120, 175), Tahoe (106, 255) | Staggered west to east, labels running right |
+| Valley towns | Reno (245, 185), Sparks (300, 160), Carson City (255, 280) | East of the lake, as they are on the ground |
+
+The basin three are deliberately not on a shared x — the stagger follows the real west-to-east order, Truckee being the westernmost and Incline Village the easternmost with the lake between. Incline gets the smaller push of the two: its label is the longest on the map, and every unit it moves right comes off the gap to Reno's dot, which is down to 30px at desktop.
+
+The two longest labels — "Incline Village" and "Carson City" — end up on separate flanks, so neither has to reach across the other.
+
+Coordinates are baked rather than applied with a `translate()` group on purpose: the right-edge budget above is measured against the raw 400-unit viewBox, and a shifted group would leave the numbers in the markup out from the space that budget is reasoned in.
+
+The source is 3:2 in a 1:1 frame, so `background-size:cover` crops about a third of its width; centred keeps the glass wall and the ridgeline behind it.
 
 ## Cinematography
 
@@ -218,7 +241,7 @@ Source photos from the camera are typically 5–10 MB each — far larger than w
 
 3. Reference the new file from `index.html` using a path like `optimized-assets/your-photo.jpg`.
 
-This pipeline took the nine current listing photos from ~102 MB of originals down to ~2.8 MB web-ready (the six on the page total ~1.4 MB) with no visible quality loss.
+This pipeline took the ten current listing photos from ~117 MB of originals down to ~3.6 MB web-ready (the seven actually on the page — six in the gallery plus the service-area map's backdrop — total ~1.5 MB) with no visible quality loss.
 
 ### Regenerating the icons
 

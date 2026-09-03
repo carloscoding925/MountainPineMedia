@@ -41,6 +41,7 @@
     { "@type": "City", "name": "Gardnerville, Nevada" },
     { "@type": "City", "name": "Fernley, Nevada" },
     { "@type": "Place", "name": "Incline Village, Nevada" },
+    { "@type": "Place", "name": "Lake Tahoe" },
     { "@type": "Place", "name": "Truckee, California" },
     { "@type": "AdministrativeArea", "name": "Washoe County, Nevada" },
     { "@type": "Place", "name": "Northern Nevada" }
@@ -429,27 +430,45 @@
           <span class="area-tag">Incline Village</span>
           <span class="area-tag">Truckee</span>
           <span class="area-tag">Fernley</span>
+          <span class="area-tag">Tahoe</span>
         </div>
       </div>
       <div class="area-map reveal">
+        <!-- No background rect: the photo and its scrim are the parent's background,
+             and an opaque fill here would hide both. Dots and labels are the
+             light-on-dark set for that reason. -->
         <svg viewBox="0 0 400 400">
-          <rect width="400" height="400" fill="#F4F7F7"/>
-          <g stroke="#D8E1E0" stroke-width="1" fill="none">
+          <g stroke="#F4F7F7" stroke-width="1" fill="none" opacity="0.28">
             <path d="M0 100 Q 130 130 220 90 T 400 110"/>
             <path d="M0 160 Q 140 190 230 150 T 400 170"/>
             <path d="M0 220 Q 150 250 240 210 T 400 230"/>
             <path d="M0 280 Q 160 310 250 270 T 400 290"/>
           </g>
-          <circle cx="140" cy="180" r="4" fill="#B8863B"/>
-          <text x="150" y="178" font-family="IBM Plex Mono" font-size="11" fill="#16232A">Reno</text>
-          <circle cx="205" cy="160" r="3" fill="#3E7488"/>
-          <text x="213" y="158" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Sparks</text>
-          <circle cx="180" cy="270" r="3" fill="#3E7488"/>
-          <text x="188" y="268" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Carson City</text>
-          <circle cx="300" cy="130" r="3" fill="#3E7488"/>
-          <text x="308" y="128" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Incline Village</text>
-          <circle cx="90" cy="130" r="3" fill="#3E7488"/>
-          <text x="98" y="128" font-family="IBM Plex Mono" font-size="10" fill="#3E7488">Truckee</text>
+          <!-- Two groups: the Tahoe basin stacked down the left at a shared x=105, and
+               the valley towns east of it. That split is the real geography — Reno,
+               Sparks and Carson City all sit east of the lake — and it keeps the two
+               longest labels ("Incline Village", "Carson City") on separate flanks so
+               neither has to reach across the other.
+               Coordinates are baked rather than wrapped in a translate() group on
+               purpose: the right-edge budget below is measured against the raw 400-unit
+               viewBox, and an offset group would put the numbers here out from the
+               space that budget is reasoned in. -->
+          <!-- Staggered west to east: Truckee really is the westernmost of the three and
+               Incline Village the easternmost, with the lake between them. Incline gets
+               the smaller push of the two — its label is the longest on the map, and
+               every unit it moves right is a unit off the gap to Reno's dot. -->
+          <circle cx="92" cy="130" r="3" fill="#D8E1E0"/>
+          <text x="100" y="128" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Truckee</text>
+          <circle cx="120" cy="175" r="3" fill="#D8E1E0"/>
+          <text x="128" y="173" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Incline Village</text>
+          <circle cx="106" cy="255" r="3" fill="#D8E1E0"/>
+          <text x="114" y="253" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Tahoe</text>
+          <circle cx="245" cy="185" r="4" fill="#B8863B"/>
+          <text x="255" y="183" font-family="IBM Plex Mono" font-size="11" fill="#F4F7F7">Reno</text>
+          <circle cx="300" cy="160" r="3" fill="#D8E1E0"/>
+          <text x="308" y="158" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Sparks</text>
+          <circle cx="255" cy="280" r="3" fill="#D8E1E0"/>
+          <text x="263" y="278" font-family="IBM Plex Mono" font-size="10" fill="#D8E1E0">Carson City</text>
         </svg>
       </div>
     </div>
