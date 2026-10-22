@@ -1,6 +1,6 @@
 # Mountain Pine Media
 
-Static marketing site for **Mountain Pine Media**, a real estate photo and video studio serving agents and brokerages across Northern Nevada. The site is a single-page portfolio with sections for services, recent work, positioning, pricing, service area, and contact. Inquiries open a pre-filled `mailto:` draft rather than posting to a server, so there's no backend to run.
+Static marketing site for **Mountain Pine Media**, a real estate photo and video studio serving agents and brokerages across Northern Nevada. The site is a single-page portfolio with sections for services, recent work, positioning, pricing, service area, and contact. The one piece of server-side code is a small Worker that takes the inquiry form's submission and emails it to the studio (see [Inquiry form](#inquiry-form)).
 
 Live at [mountain-pine-media.com](https://mountain-pine-media.com).
 
@@ -8,12 +8,14 @@ Live at [mountain-pine-media.com](https://mountain-pine-media.com).
 
 The site is intentionally simple — no build step, no framework — so it stays fast and easy to maintain.
 
-- **HTML / CSS / vanilla JS** — single `index.html`, single `styles.css`, and one inline `<script>` covering the sticky-nav scroll state, the mobile hamburger toggle, reveal-on-scroll animations via `IntersectionObserver`, and the inquiry form's `mailto:` composition.
+- **HTML / CSS / vanilla JS** — single `index.html`, single `styles.css`, and one inline `<script>` covering the sticky-nav scroll state, the mobile hamburger toggle, reveal-on-scroll animations via `IntersectionObserver`, the parallax, the film carousel and lightbox, and the inquiry form's submission.
 - **Google Fonts** — Fraunces, Inter, and IBM Plex Mono, loaded via `<link rel="preconnect">` for fast first paint.
 - **Inline SVG** — the brand mark, the hero contour field, and the service-area map are all hand-drawn SVG rather than image files. The **Recent Work** tiles are real photographs (see [Portfolio tiles](#portfolio-tiles)).
 - **Photographic section backgrounds** — the hero and Service Area sit on a listing photo that parallaxes as the page scrolls (see [Parallax](#parallax)). This is a deliberate reversal of an older rule that nothing above the fold waited on a network image: the hero's backdrop is now a ~524 KB download, mitigated with a `<link rel="preload">` but not free. The hero still paints its `--lake-deep` ground immediately, so text is legible before the photo lands.
 - **Vimeo** — the listing films are embedded via Vimeo's iframe player rather than self-hosted. Not just a preference: Cloudflare caps a static asset at 25 MiB and the source films are 74–244 MB each (see [Cinematography](#cinematography)).
-- **Cloudflare Workers** — deployment target, using Workers static assets. Configured via [`wrangler.jsonc`](web/wrangler.jsonc) with `assets.directory: "."` so the `web/` folder is served as the site root.
+- **Cloudflare Workers** — deployment target, using Workers static assets. Configured via [`wrangler.jsonc`](web/wrangler.jsonc) with `assets.directory: "./public"`, so `web/public/` is the site root and `web/worker.js` sits outside it and is never itself servable.
+- **Resend** — transactional email API the inquiry Worker posts to. The API key lives in Worker secrets, never in the repo.
+- **Cloudflare Turnstile** — CAPTCHA alternative guarding the inquiry form, verified server-side in the Worker (see [Spam filtering](#spam-filtering)).
 - **ImageMagick** — local CLI tool used to resize and recompress listing photos before deploy, and to generate the favicon set (see [Image workflow](#image-workflow)).
 
 ## Project structure
@@ -21,43 +23,80 @@ The site is intentionally simple — no build step, no framework — so it stays
 ```
 Mountain-Pine-Media/
 ├── assets/                    # Original full-resolution photos (NOT deployed — kept for re-processing)
-├── web/                       # Everything in here is what gets deployed
-│   ├── index.html
-│   ├── styles.css
-│   ├── wrangler.jsonc         # Cloudflare deploy config
-│   ├── favicon.ico            # Browser tab icon (multi-size 16/32/48)
-│   ├── apple-touch-icon.png   # iOS / iMessage icon (180×180)
-│   ├── og-image.png           # Open Graph link preview (1200×1200)
-│   ├── robots.txt             # Allows all crawlers, points at the sitemap
-│   ├── sitemap.xml            # Single-URL sitemap (update lastmod on content changes)
-│   └── optimized-assets/      # Web-ready listing images (resized + recompressed)
+├── web/                          # Wrangler's root — nothing here is served except public/
+│   ├── wrangler.jsonc            # Cloudflare deploy config
+│   ├── worker.js                 # /api/inquiry endpoint; falls through to assets
+│   ├── email.js                  # Notification email template (worker + preview share it)
+│   ├── preview-email.mjs         # Renders that email locally without sending
+│   └── public/                   # Everything in here is what gets served
+│       ├── index.html
+│       ├── styles.css
+│       ├── favicon.ico           # Browser tab icon (multi-size 16/32/48)
+│       ├── apple-touch-icon.png  # iOS / iMessage icon (180×180)
+│       ├── og-image.png          # Open Graph link preview (1200×1200)
+│       ├── robots.txt            # Allows all crawlers, points at the sitemap
+│       ├── sitemap.xml           # Single-URL sitemap (update lastmod on content changes)
+│       └── optimized-assets/     # Web-ready listing images (resized + recompressed)
 └── README.md
 ```
 
-The split between `assets/` (project root) and `web/optimized-assets/` is deliberate: only files inside `web/` are served by Cloudflare, so the high-resolution originals never ship to the public site but stay available locally for re-processing.
+The split between `assets/` (project root) and `web/public/optimized-assets/` is deliberate: only files inside `web/public/` are served by Cloudflare, so the high-resolution originals never ship to the public site but stay available locally for re-processing.
+
+`worker.js`, `email.js`, and `preview-email.mjs` sit beside `public/` rather than inside it for the same reason — anything in the assets directory becomes a public URL. That was not hypothetical: before this layout the assets directory was `web/` itself, and `mountain-pine-media.com/wrangler.jsonc` served the deploy config to anyone who asked. Verified under `wrangler dev`: `/worker.js`, `/email.js`, `/wrangler.jsonc`, and `/.dev.vars` all 404.
 
 ## Local development
 
-Serve the `web/` folder with any static server:
+Serve the `web/public/` folder with any static server:
 
 ```bash
-cd web
+cd web/public
 python3 -m http.server 8000
 # then visit http://localhost:8000
 ```
 
-For a closer-to-production preview that mirrors the Cloudflare environment, run wrangler from inside `web/` so it picks up `wrangler.jsonc`:
+This serves the page but not the Worker, so submitting the inquiry form will fail — that path needs `wrangler dev` below.
+
+For a closer-to-production preview that mirrors the Cloudflare environment — and the only way to exercise the inquiry endpoint — run wrangler from inside `web/` so it picks up `wrangler.jsonc`:
 
 ```bash
 cd web
 npx wrangler dev
 ```
 
-`open web/index.html` also works for quick layout and copy tweaks.
+`open web/public/index.html` also works for quick layout and copy tweaks, but serve over HTTP when testing the films or the form — they talk to Vimeo and Turnstile across origins, which behaves differently from `file://`.
 
 ## Deployment
 
 Pushes to the `main` branch trigger an automatic build and deploy of the `web/` directory to Cloudflare.
+
+The inquiry Worker needs two secrets, `RESEND_API_KEY` and `TURNSTILE_SECRET_KEY`, and **production and local dev read them from two different places**.
+
+For the deployed Worker, set them in the dashboard (**Workers & Pages → mountain-pine-media → Settings → Variables and Secrets**) or with wrangler, which prompts for the value so it never reaches your shell history:
+
+```bash
+cd web
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put TURNSTILE_SECRET_KEY
+```
+
+Wrangler refuses `secret put` when the Worker's latest version isn't the active deployment (Lake & Pine's README has the exact error). The dashboard isn't subject to that check, which makes it the way to have both secrets in place *before* the deploy that first needs them. Secrets persist across later `wrangler deploy` runs.
+
+For `wrangler dev`, put them in `web/.dev.vars` (gitignored, alongside `wrangler.jsonc` — not the repo root). Locally `TURNSTILE_SECRET_KEY` is Cloudflare's always-passing dummy secret, so no real credential is needed to exercise the guardrails — see [The testing keys](#the-testing-keys-and-the-trap-in-them).
+
+Without `RESEND_API_KEY` the endpoint returns `500 {"error":"Email is not configured."}`; with a bad key it returns `502`. Without `TURNSTILE_SECRET_KEY` it returns `500 {"error":"Spam protection is not configured."}`. Those three responses are the quickest way to tell which half is misconfigured.
+
+`INQUIRY_TO` and `INQUIRY_FROM` are optional overrides; without them the Worker sends to `mtnpinemedia@gmail.com` from `inquiries@mountain-pine-media.com`. `ALLOWED_ORIGINS` and `TURNSTILE_EXPECT_HOSTNAME` are optional too, and only needed if the site is ever served from a hostname the Worker doesn't see as its own.
+
+**Resend's free plan sends 100 emails a day and 3,000 a month, across up to 3 domains.** Going over is a hard stop, not an overage charge: the API answers `429` and refuses the send until the quota resets. The Worker turns any Resend failure into a `502`, and **the inquiry is not queued or retried — it is lost**, so the agent sees the "email us instead" message. The quota is per Resend account, so if this domain is added to the same account as Lake & Pine's, the two sites share the 100 a day.
+
+### First deploy of the inquiry form
+
+The form fails closed: until every piece below is in place, every inquiry gets the "email us instead" message rather than going anywhere. In order:
+
+1. **Turnstile widget.** Create one in the Cloudflare dashboard for both `mountain-pine-media.com` and `www.mountain-pine-media.com` — both, because `www` serves the site rather than redirecting to the apex, so a single-hostname widget fails for anyone who lands there. Put its sitekey in `data-sitekey` on `#inquiry-turnstile` in `index.html`, replacing the testing key.
+2. **Resend domain.** Add `mountain-pine-media.com` in Resend and create its DNS records in Cloudflare — see [Email authentication](#email-authentication-spf-dkim-dmarc), because this domain's current records reject all mail until that's done. Wait for Resend to show the domain as verified, then create an API key.
+3. **Secrets.** Set `TURNSTILE_SECRET_KEY` (the widget's secret) and `RESEND_API_KEY` in the dashboard.
+4. **Merge to `main`.** Then submit one real inquiry and confirm it arrives in `mtnpinemedia@gmail.com`. Gmail may file the first few from a new sender under spam; marking one "not spam" settles it.
 
 ## Portfolio tiles
 
@@ -97,7 +136,7 @@ The feature tile renders about 1007 CSS px wide, so a 2× display needs ~2014px 
 ```bash
 magick "twilight 2.jpg" -auto-orient -resize '2400x2400>' -strip \
   -interlace Plane -sampling-factor 4:2:0 -quality 82 \
-  "../web/optimized-assets/twilight-2-2400.jpg"
+  "../web/public/optimized-assets/twilight-2-2400.jpg"
 ```
 
 Gallery payload: **1.44 MB** on a 1× display, **1.73 MB** on 2×. If a different photo is promoted to the feature slot, give it the 2400px export too — otherwise it will look soft on retina.
@@ -223,7 +262,7 @@ The Service Area answers that with a genuinely different frame below 860px: the 
 ```bash
 magick DJI_0194.jpg -auto-orient -rotate -90 \
   -resize 1200x -strip -interlace Plane -sampling-factor 4:2:0 -quality 70 \
-  ../web/optimized-assets/DJI_0194-portrait-1200.jpg
+  ../web/public/optimized-assets/DJI_0194-portrait-1200.jpg
 ```
 
 **Where the subject sits decides what the parallax reveals.** Scrolling down translates the layer down, which walks the visible window *up* through the image — so whatever is near the top arrives last. Uncropped, the patio sits ~63% down, which means it is on screen from the start and the **roof** is what comes into view.
@@ -327,7 +366,7 @@ Verified with the lightbox open at 390×844, 390×667, 360×640, 320×568, 844×
 Source photos from the camera are typically 5–10 MB each — far larger than what the web needs. Before adding new photos to the portfolio:
 
 1. Drop the originals into the project-root `assets/` folder (kept out of the deploy).
-2. Resize and recompress with ImageMagick into `web/optimized-assets/`:
+2. Resize and recompress with ImageMagick into `web/public/optimized-assets/`:
 
    ```bash
    cd assets
@@ -340,7 +379,7 @@ Source photos from the camera are typically 5–10 MB each — far larger than w
        -interlace Plane \
        -sampling-factor 4:2:0 \
        -quality 82 \
-       "../web/optimized-assets/$out"
+       "../web/public/optimized-assets/$out"
    done
    ```
 
@@ -364,19 +403,111 @@ magick -size 512x512 xc:'#14293A' \
   -draw "stroke-linejoin round stroke-linecap round polyline 56,365 165,183 238,292 310,147 456,365" \
   mark512.png
 
-magick mark512.png -resize 180x180 -background '#14293A' -alpha remove -depth 8 -strip web/apple-touch-icon.png
+magick mark512.png -resize 180x180 -background '#14293A' -alpha remove -depth 8 -strip web/public/apple-touch-icon.png
 magick mark512.png \
   \( -clone 0 -resize 48x48 \) \( -clone 0 -resize 32x32 \) \( -clone 0 -resize 16x16 \) \
-  -delete 0 web/favicon.ico
+  -delete 0 web/public/favicon.ico
 ```
 
 `og-image.png` is the same mark at 1200×1200 with the wordmark set in Georgia Bold beneath it — a stand-in for Fraunces, which isn't installed locally. If Fraunces is ever installed, point `-font` at it and regenerate for an exact match with the site's headings.
 
-## Contact form
+## Inquiry form
 
-There's no backend, so the inquiry form doesn't POST anywhere. On submit it builds a `mailto:mtnpinemedia@gmail.com` link with the name, brokerage, email, listing address, and notes formatted into the body, then hands off to the visitor's mail client. The note under the button says so plainly, and names the address as a fallback in case no mail client is registered.
+The form in **Get In Touch** posts to `/api/inquiry` in [`worker.js`](web/worker.js), which emails the submission to `mtnpinemedia@gmail.com` **via [Resend](https://resend.com)**. The reply-to is set to the agent, so hitting reply in the inbox reaches them directly. It replaced a `mailto:` draft, which depended on the visitor having a mail client set up and left nothing sent until they finished the job in it.
 
-If a real form endpoint is ever wanted, the natural fit is a Cloudflare Worker route alongside the static assets, or a third-party form service — but the `mailto:` path keeps the site fully static today.
+It is a port of Lake & Pine's review form, and the guardrails are the same code. What differs:
+
+- **Name and email are required**, where the review form needs only a star rating. An inquiry nobody can answer is no use, and the email becomes `reply_to`. The Worker checks both again and answers `400`.
+- **Validation is the browser's own.** The review form is `novalidate` because its star inputs are visually hidden and `reportValidity()` can't anchor a bubble to them. Every required field here is a visible input, so the native bubble works and there's nothing to hand-roll.
+- **Turnstile loads on approach, not with the page.** The review form is a page of its own; this form is the last thing on a long homepage most visitors never reach. The widget runs a challenge the moment it renders, so it is rendered explicitly once the form comes within 600px of the viewport, or the moment anything in the form takes focus. The script is never requested by a visitor who doesn't scroll that far.
+- **A link in the notes is not flagged.** Lake & Pine marks reviews containing a URL as possible spam; an agent pasting the Zillow or MLS page for the listing is an ordinary inquiry, so here that heuristic would mostly flag real business.
+
+A few details worth keeping:
+
+- **The form requires JavaScript.** Turnstile is a scripted challenge, and a no-JS path that skipped it would be precisely the door bots use. `<noscript>` hides the form and offers the email address instead.
+- **`.form[hidden]` needs its own rule.** `display:flex` beats the user-agent's `[hidden]{display:none}`, so without it the filled-in form stays on screen behind the thanks message.
+- **The widget picks its size when it renders.** `flexible` fills the column but bottoms out at 300px, and on a 320px phone the column is 280px, so below 300px it renders `compact` (150×140) instead. Measured at 390px: a 350px widget in a 350px column; at 320px: compact, inside the column, no horizontal scroll.
+- **If Turnstile's script is blocked** — a privacy extension, a network filter — the form can never get a token. The status line says so straight away and gives the email address, rather than letting someone type everything out first.
+- **The error colour is `#E39A87`, not a palette token.** Brass reads as the accent rather than a problem; this coral holds 6.6:1 against `--lake-deep`.
+
+### Spam filtering
+
+Four checks stand in front of the send, ordered cheapest first so a flood costs as little as possible. Only the last spends a network round trip.
+
+| # | Check | Rejects with |
+|---|---|---|
+| 1 | **Same-origin.** `Origin` must equal the Worker's own origin. Trivially forgeable by anything that isn't a browser — that's the point, it costs nothing and drops drive-by scripted posts. `ALLOWED_ORIGINS` extends it if the page is ever served from another hostname. | `403` |
+| 2 | **Rate limit.** Native Workers binding, 5 requests per 60s per IP. | `429` |
+| 3 | **Honeypot.** An off-screen `website` field — positioned off-screen rather than `display:none`, which the cruder bots check for. Filling it returns `200` and silently drops the submission; telling a bot it was caught only helps it. | `200` (lie) |
+| 4 | **[Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/).** Verified server-side against `siteverify`. | `403` |
+
+The rate limiter's `period` accepts only 10 or 60 seconds, so it is a flood stop rather than a daily cap. Counters are shared per `namespace_id` across the whole Cloudflare account, and Lake & Pine's limiter already uses `1001` — this one is `1002`, and the two must stay different if both Workers ever share an account.
+
+**Turnstile pins `action` and `hostname`, not just `success`.** A bare `success` check accepts any valid token, including one farmed from a widget on someone else's page and replayed here. `action` must match `TURNSTILE_ACTION` in `worker.js` and `data-action` on the widget — **change one and you must change the other**, or every submission is rejected.
+
+**Tokens are single-use and expire after 300 seconds.** The widget refreshes itself (`refresh-expired: 'auto'`), and the page calls `turnstile.reset()` after a failed submit so a retry doesn't spend an already-spent token. The page also refuses to post at all until a token exists, because a submission without one is a guaranteed `403` and the agent isn't at fault.
+
+**A missing `TURNSTILE_SECRET_KEY` fails closed** with a `500`, like a missing Resend key. Spam protection that switches itself off when its configuration goes missing is the one failure mode worth refusing outright.
+
+Verified under `wrangler dev`, in order: no `Origin` → `403`; a foreign `Origin` → `403`; honeypot filled → `200` with nothing sent; no name and a malformed email → `400`; valid but no token → `403`; valid with the dummy token → through Turnstile to `500` (no Resend key locally); malformed JSON → `400`; the sixth request inside a minute → `429`.
+
+#### The testing keys, and the trap in them
+
+Cloudflare publishes dummy keys, and `web/.dev.vars` uses the always-passing secret so `wrangler dev` runs with no real credentials:
+
+| | Sitekey (public, in the HTML) | Secret (in `.dev.vars`) |
+|---|---|---|
+| always passes | `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` |
+| always blocks | `2x00000000000000000000AB` | `2x0000000000000000000000000000000AA` |
+
+Dummy secrets answer with `hostname: "example.com"` and **no `action` field at all**, so pinning either would reject every local submission. `worker.js` therefore skips those two checks when the configured secret is one of the documented testing values — decided from the secret rather than from the response, so what comes back over the network can't influence it. This costs nothing in production, where a testing secret would already pass everything regardless.
+
+> **`index.html` currently carries the always-passing *testing* sitekey.** It has to be swapped for the live one before this ships — step 1 of [First deploy](#first-deploy-of-the-inquiry-form). If you ever see a red *"For testing only. If seen, report to site owner"* bar under the widget on the live site, the testing sitekey is in the page, and every submission will be failing at verify time.
+>
+> **Keep the dummy secret in `web/.dev.vars`, not the real one.** The live widget won't issue a valid token on `localhost`, and the Worker only skips action/hostname pinning for the documented testing secrets — so a real secret locally means every `wrangler dev` submission `403`s. The endpoint itself can always be exercised with `curl` and the dummy token `XXXX.DUMMY.TOKEN.XXXX`. To drive the real widget in a browser, add `localhost` to its hostname list in the dashboard, put the real secret in `.dev.vars`, and browse at `localhost:8787` rather than `127.0.0.1` — hostname pinning compares against the address you used. Swapping the testing sitekey back into the page for local work also works, but it is exactly the change that gets committed by accident.
+
+### The notification email
+
+The template lives in [`web/email.js`](web/email.js), imported by both `worker.js` and the preview script so a preview can never drift from what actually sends. Resend gets `text` and `html` together and the client picks one.
+
+**Preview it without sending anything:**
+
+```bash
+cd web
+node preview-email.mjs --open     # renders four cases to web/.email-preview/ (gitignored)
+```
+
+It leads with the listing, because that's what decides whether and when the shoot happens, then the notes, then who it's from. The subject keeps the shape the old `mailto:` draft used — `Shoot inquiry — <listing>` — and adds the agent's name in brackets, since every inquiry now arrives from the same sender address and the inbox would otherwise show nothing to tell them apart.
+
+Email is not the web, and three constraints shape the HTML:
+
+- **Google Fonts do not load.** Gmail strips the `<link>` and Outlook ignores it. The serif falls back to Georgia and the mono to the system monospace stack.
+- **Styles are inline and the layout is tables.** Several clients drop `<style>` blocks, and desktop Outlook renders with Word's engine, which has no usable flexbox or grid.
+- **The inner table needs `table-layout: fixed`.** Tables size to their content, so a single long unbroken line stretches the email past its 600px max-width.
+
+Everything the agent typed is HTML-escaped; the `escaping-and-link` preview case keeps a literal `<em>` and an ampersand in the notes and the name so that stays covered. Line breaks in the notes are kept.
+
+### Email authentication (SPF, DKIM, DMARC)
+
+As of October 2026, `mountain-pine-media.com` is set up as a domain that sends **no mail at all**. Its DNS is on Cloudflare:
+
+| Record | Value |
+|---|---|
+| `MX` | *(none)* |
+| `TXT` @ apex | `v=spf1 -all` — no server is authorised to send |
+| `TXT` @ `_dmarc` | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s` — reject anything that fails, strict alignment |
+
+Resend changes that, and its dashboard gives the exact records to add. Expect a DKIM `TXT` at `resend._domainkey`, plus an `MX` and an SPF `TXT` on the `send` subdomain, which Resend uses as the envelope sender for bounces. **Leave the apex SPF and the DMARC record as they are.** The apex SPF never sees Resend's mail, since the envelope sender is `send.mountain-pine-media.com`, and the strict DMARC policy is good protection against anyone spoofing the domain.
+
+What this means in practice: DMARC passes when *either* SPF or DKIM aligns, and with `aspf=s` SPF never can — `send.mountain-pine-media.com` isn't an exact match for the `From` domain. **The `resend._domainkey` record is the only thing making inquiry emails DMARC-compliant**, and under `p=reject` a failure is not a trip to the spam folder: Gmail refuses the message outright. The Worker would still have had a `200` from Resend, so the agent sees the thanks message and the inquiry is silently gone; only Resend's dashboard would show the bounce. Never delete that record while tidying DNS.
+
+Verifying, including straight from the authoritative nameservers when a local resolver has a stale negative cache:
+
+```bash
+dig +short TXT resend._domainkey.mountain-pine-media.com
+dig +short TXT _dmarc.mountain-pine-media.com
+dig +short @"$(dig +short NS mountain-pine-media.com | head -1)" TXT resend._domainkey.mountain-pine-media.com
+```
 
 ## SEO & link previews
 
@@ -390,4 +521,4 @@ Alongside those:
 
 Note that the biggest remaining wins for search visibility are off-site: a Google Business Profile and Search Console verification.
 
-The domain `mountain-pine-media.com` is hardcoded in four places — the `<head>` meta block and JSON-LD in `index.html`, `robots.txt`, and `sitemap.xml`. Change all four together if it ever moves.
+The domain `mountain-pine-media.com` is hardcoded in six places — the `<head>` meta block and JSON-LD in `index.html`, `robots.txt`, `sitemap.xml`, the default sender in `worker.js`, and the footer line in `email.js`. Change them together if it ever moves, and add the new hostname to the Turnstile widget and to Resend as well.
