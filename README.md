@@ -91,10 +91,10 @@ Without `RESEND_API_KEY` the endpoint returns `500 {"error":"Email is not config
 
 ### First deploy of the inquiry form
 
-The form fails closed: until every piece below is in place, every inquiry gets the "email us instead" message rather than going anywhere. In order:
+The form fails closed: until every piece below is in place, every inquiry gets the "email us instead" message rather than going anywhere. Steps 1–3 were done in October 2026; the list stays as the order to follow if any of it is ever rebuilt — a new Cloudflare account, a new Resend account, or a domain move. In order:
 
 1. **Turnstile widget.** Create one in the Cloudflare dashboard for both `mountain-pine-media.com` and `www.mountain-pine-media.com` — both, because `www` serves the site rather than redirecting to the apex, so a single-hostname widget fails for anyone who lands there. Put its sitekey in `data-sitekey` on `#inquiry-turnstile` in `index.html`, replacing the testing key.
-2. **Resend domain.** Add `mountain-pine-media.com` in Resend and create its DNS records in Cloudflare — see [Email authentication](#email-authentication-spf-dkim-dmarc), because this domain's current records reject all mail until that's done. Wait for Resend to show the domain as verified, then create an API key.
+2. **Resend domain.** Add `mountain-pine-media.com` in Resend and create its DNS records in Cloudflare — see [Email authentication](#email-authentication-spf-dkim-dmarc), because the domain's lockdown records reject all mail sent as it until Resend's DKIM record is in place. Wait for Resend to show the domain as verified, then create an API key.
 3. **Secrets.** Set `TURNSTILE_SECRET_KEY` (the widget's secret) and `RESEND_API_KEY` in the dashboard.
 4. **Merge to `main`.** Then submit one real inquiry and confirm it arrives in `mtnpinemedia@gmail.com`. Gmail may file the first few from a new sender under spam; marking one "not spam" settles it.
 
@@ -462,7 +462,7 @@ Cloudflare publishes dummy keys, and `web/.dev.vars` uses the always-passing sec
 
 Dummy secrets answer with `hostname: "example.com"` and **no `action` field at all**, so pinning either would reject every local submission. `worker.js` therefore skips those two checks when the configured secret is one of the documented testing values — decided from the secret rather than from the response, so what comes back over the network can't influence it. This costs nothing in production, where a testing secret would already pass everything regardless.
 
-> **`index.html` currently carries the always-passing *testing* sitekey.** It has to be swapped for the live one before this ships — step 1 of [First deploy](#first-deploy-of-the-inquiry-form). If you ever see a red *"For testing only. If seen, report to site owner"* bar under the widget on the live site, the testing sitekey is in the page, and every submission will be failing at verify time.
+> **`index.html` carries the live sitekey**, and its widget is scoped to `mountain-pine-media.com` and `www.mountain-pine-media.com`. If you ever see a red *"For testing only. If seen, report to site owner"* bar under the widget on the live site, the testing sitekey has come back, and every submission will be failing at verify time.
 >
 > **Keep the dummy secret in `web/.dev.vars`, not the real one.** The live widget won't issue a valid token on `localhost`, and the Worker only skips action/hostname pinning for the documented testing secrets — so a real secret locally means every `wrangler dev` submission `403`s. The endpoint itself can always be exercised with `curl` and the dummy token `XXXX.DUMMY.TOKEN.XXXX`. To drive the real widget in a browser, add `localhost` to its hostname list in the dashboard, put the real secret in `.dev.vars`, and browse at `localhost:8787` rather than `127.0.0.1` — hostname pinning compares against the address you used. Swapping the testing sitekey back into the page for local work also works, but it is exactly the change that gets committed by accident.
 
@@ -489,15 +489,17 @@ Everything the agent typed is HTML-escaped; the `escaping-and-link` preview case
 
 ### Email authentication (SPF, DKIM, DMARC)
 
-As of October 2026, `mountain-pine-media.com` is set up as a domain that sends **no mail at all**. Its DNS is on Cloudflare:
+`mountain-pine-media.com` started out set up as a domain that sends **no mail at all** — the apex SPF and DMARC records below. Resend's two records were added on top for the inquiry form. All of it lives in Cloudflare DNS; checked against the authoritative nameservers in October 2026:
 
-| Record | Value |
-|---|---|
-| `MX` | *(none)* |
-| `TXT` @ apex | `v=spf1 -all` — no server is authorised to send |
-| `TXT` @ `_dmarc` | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s` — reject anything that fails, strict alignment |
+| Record | Value | Serves |
+|---|---|---|
+| `MX` | *(none)* | Nothing receives mail at this domain — the studio's inbox is Gmail |
+| `TXT` @ apex | `v=spf1 -all` | SPF — authorises no server to send as the apex |
+| `TXT` @ `_dmarc` | `v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s` | DMARC — reject anything that fails, strict alignment |
+| `TXT` @ `resend._domainkey` | *(public key)* | DKIM for mail the inquiry Worker sends |
+| `CNAME` @ `send` | `send.forge.rmta.net` | Resend's envelope sender: bounce `MX` and its own SPF, both served from Resend's side |
 
-Resend changes that, and its dashboard gives the exact records to add. Expect a DKIM `TXT` at `resend._domainkey`, plus an `MX` and an SPF `TXT` on the `send` subdomain, which Resend uses as the envelope sender for bounces. **Leave the apex SPF and the DMARC record as they are.** The apex SPF never sees Resend's mail, since the envelope sender is `send.mountain-pine-media.com`, and the strict DMARC policy is good protection against anyone spoofing the domain.
+**Leave the apex SPF and the DMARC record as they are.** The apex SPF never sees Resend's mail, since the envelope sender is `send.mountain-pine-media.com`, and the strict DMARC policy is good protection against anyone spoofing the domain. Resend asks for the `send` records as a single `CNAME` rather than a separate `MX` and `TXT`, which means its IP ranges can change without this DNS needing to.
 
 What this means in practice: DMARC passes when *either* SPF or DKIM aligns, and with `aspf=s` SPF never can — `send.mountain-pine-media.com` isn't an exact match for the `From` domain. **The `resend._domainkey` record is the only thing making inquiry emails DMARC-compliant**, and under `p=reject` a failure is not a trip to the spam folder: Gmail refuses the message outright. The Worker would still have had a `200` from Resend, so the agent sees the thanks message and the inquiry is silently gone; only Resend's dashboard would show the bounce. Never delete that record while tidying DNS.
 

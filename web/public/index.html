@@ -519,12 +519,13 @@
            viewport. data-action must stay in step with TURNSTILE_ACTION in worker.js —
            the Worker pins it at verify time, so changing one alone rejects every submission.
 
-           TODO before deploy: this is Cloudflare's always-passing TESTING sitekey. Swap in
-           the live one from the dashboard (Turnstile → widget for mountain-pine-media.com
-           and www.mountain-pine-media.com). Left in production, the widget shows a red
-           "For testing only" bar and every submission fails verification. -->
+           This is the live sitekey (public by design — it is meant to sit in the page).
+           Its widget is scoped to mountain-pine-media.com and www.mountain-pine-media.com,
+           so it will not issue a token on localhost. For local work, keep Cloudflare's
+           dummy testing secret in web/.dev.vars; the README covers driving the real widget
+           locally. -->
       <div class="form-turnstile" id="inquiry-turnstile"
-           data-sitekey="1x00000000000000000000AA"
+           data-sitekey="0x4AAAAAAFgD5E4W1hv9X7PX"
            data-action="inquiry"></div>
       <button type="submit">SEND INQUIRY</button>
       <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
