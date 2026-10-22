@@ -101,6 +101,10 @@
      step with the .hero::before rules and their 1100px breakpoint. -->
 <link rel="preload" as="image" href="optimized-assets/DSC08587-2560.jpg" media="(min-width:1100px)">
 <link rel="preload" as="image" href="optimized-assets/DSC08587.jpg" media="(max-width:1099.98px)">
+
+<!-- The inquiry form can't be submitted without JavaScript: Turnstile is a scripted
+     challenge, and a no-JS path that skipped it would just be the door bots use. -->
+<noscript><style>#inquiry-form{display:none;}</style></noscript>
 </head>
 <body>
 
@@ -493,15 +497,44 @@
         <a href="tel:+17753134243">(775) 313-4243 <span>→</span></a>
       </div>
     </div>
-    <form class="form reveal" id="inquiry-form">
+    <noscript>
+      <p class="form-noscript">
+        The form needs JavaScript switched on, to check the submission isn't automated.
+        Email <a href="mailto:mtnpinemedia@gmail.com">mtnpinemedia@gmail.com</a> instead — it reaches the same inbox.
+      </p>
+    </noscript>
+    <form class="form reveal" id="inquiry-form" action="/api/inquiry" method="post">
+      <!-- Honeypot. Positioned off-screen rather than display:none, which the cruder
+           bots check for. Real people never see it; anything that fills it is discarded. -->
+      <div class="hp" aria-hidden="true">
+        <label for="website">Website</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
       <input type="text" name="name" placeholder="Name" required>
       <input type="text" name="brokerage" placeholder="Brokerage">
       <input type="email" name="email" placeholder="Email" required>
       <input type="text" name="listing" placeholder="Listing address + target date">
       <textarea name="notes" placeholder="Anything else we should know?"></textarea>
+      <!-- Cloudflare Turnstile, rendered by the script below once the form is near the
+           viewport. data-action must stay in step with TURNSTILE_ACTION in worker.js —
+           the Worker pins it at verify time, so changing one alone rejects every submission.
+
+           This is the live sitekey (public by design — it is meant to sit in the page).
+           Its widget is scoped to mountain-pine-media.com and www.mountain-pine-media.com,
+           so it will not issue a token on localhost. For local work, keep Cloudflare's
+           dummy testing secret in web/.dev.vars; the README covers driving the real widget
+           locally. -->
+      <div class="form-turnstile" id="inquiry-turnstile"
+           data-sitekey="0x4AAAAAAFgD5E4W1hv9X7PX"
+           data-action="inquiry"></div>
       <button type="submit">SEND INQUIRY</button>
-      <p class="form-note" id="form-note" role="status">Opens in your email app — nothing is sent until you hit send there.</p>
+      <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
     </form>
+    <div class="form-thanks" id="form-thanks" tabindex="-1" hidden>
+      <div class="section-eyebrow">Inquiry Sent</div>
+      <h3>Got it — it's in our inbox.</h3>
+      <p>We'll reply by email within a day to confirm a shoot time. Need it sooner? Call <a href="tel:+17753134243">(775) 313-4243</a>.</p>
+    </div>
   </div>
 </section>
 
@@ -604,34 +637,133 @@
     window.addEventListener('resize', schedule, { passive: true });
   })();
 
-  // Inquiry form — there's no backend, so the form composes a mailto: instead of
-  // posting anywhere. Everything the agent typed is carried into the draft.
+  // Inquiry form — posts to /api/inquiry in worker.js, which emails the studio through
+  // Resend. The guardrails (same-origin, rate limit, honeypot, Turnstile) are all
+  // enforced there; this side only collects the Turnstile token and reports back.
   (function () {
     const form = document.getElementById('inquiry-form');
     if (!form) return;
-    const note = document.getElementById('form-note');
+    const statusEl = document.getElementById('form-status');
+    const thanks = document.getElementById('form-thanks');
+    const submit = form.querySelector('button[type="submit"]');
+    const widget = document.getElementById('inquiry-turnstile');
 
-    form.addEventListener('submit', (e) => {
+    const GENERIC_ERROR =
+      'That didn’t send. Please email mtnpinemedia@gmail.com and we’ll take it from there.';
+    const BLOCKED =
+      'The spam check couldn’t load, so this form can’t send. Please email mtnpinemedia@gmail.com instead.';
+
+    // Turnstile loads on approach rather than with the page. It runs a challenge the
+    // moment it renders, and this form is the last thing on a long page — no reason to
+    // make every visitor pay for it, or to let a token age while they read the gallery.
+    let widgetId = null;
+    let requested = false;
+    let blocked = false;
+
+    function loadTurnstile() {
+      if (requested) return;
+      requested = true;
+      window.onTurnstileLoad = () => {
+        widgetId = window.turnstile.render(widget, {
+          sitekey: widget.dataset.sitekey,
+          action: widget.dataset.action,
+          theme: 'dark',
+          // flexible fills the column but bottoms out at 300px, and the column is
+          // narrower than that on a 320px phone; compact is the only size that fits there.
+          size: widget.clientWidth >= 300 ? 'flexible' : 'compact',
+          'refresh-expired': 'auto'
+        });
+      };
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad';
+      script.async = true;
+      // An extension or network filter blocked it, so this form can never get a token.
+      // Say so now, rather than letting them type everything out first.
+      script.onerror = () => {
+        blocked = true;
+        fail(BLOCKED);
+      };
+      document.head.appendChild(script);
+    }
+
+    const approach = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        approach.disconnect();
+        loadTurnstile();
+      }
+    }, { rootMargin: '600px 0px' });
+    approach.observe(form);
+    // Anything that puts them in the form without scrolling past it first.
+    form.addEventListener('focusin', loadTurnstile);
+
+    function showThanks() {
+      form.hidden = true;
+      thanks.hidden = false;
+      thanks.focus();
+    }
+
+    function fail(message) {
+      submit.disabled = false;
+      statusEl.className = 'form-status is-error';
+      statusEl.textContent = message;
+      // Turnstile tokens are single-use, so the one just spent is dead either way.
+      // Without this reset a second attempt fails on a stale token rather than on
+      // whatever actually went wrong the first time.
+      if (window.turnstile && widgetId !== null) window.turnstile.reset(widgetId);
+    }
+
+    // By the time this runs the browser has already checked name and email. The form
+    // isn't novalidate: unlike the review form's hidden star inputs, every required
+    // field here is a visible input the native bubble can anchor to.
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const value = (name) => (form.elements[name].value || '').trim();
-      const listing = value('listing');
 
-      const body = [
-        'Name: ' + value('name'),
-        'Brokerage: ' + (value('brokerage') || '—'),
-        'Email: ' + value('email'),
-        'Listing address + target date: ' + (listing || '—'),
-        '',
-        value('notes') || ''
-      ].join('\n');
+      // The widget usually resolves before anyone finishes typing, but it can still be
+      // working on a slow connection. Posting without a token is a guaranteed 403, so
+      // say what's happening instead of blaming the submitter for it.
+      const token = form.querySelector('[name="cf-turnstile-response"]');
+      if (!token || !token.value) {
+        if (blocked) {
+          fail(BLOCKED);
+          return;
+        }
+        loadTurnstile();
+        statusEl.className = 'form-status is-pending';
+        statusEl.textContent = 'Just a moment — still checking your browser. Try again in a second.';
+        return;
+      }
 
-      const subject = listing ? 'Shoot inquiry — ' + listing : 'Shoot inquiry';
-      window.location.href = 'mailto:mtnpinemedia@gmail.com' +
-        '?subject=' + encodeURIComponent(subject) +
-        '&body=' + encodeURIComponent(body);
+      submit.disabled = true;
+      statusEl.className = 'form-status is-pending';
+      statusEl.textContent = 'Sending…';
 
-      note.textContent = "Your email app should be opening — if nothing happened, write us at mtnpinemedia@gmail.com.";
-      note.classList.add('is-active');
+      let res;
+      try {
+        res = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form)))
+        });
+      } catch (err) {
+        fail(GENERIC_ERROR);
+        return;
+      }
+
+      if (res.ok) {
+        showThanks();
+        return;
+      }
+
+      // 403 and 429 are the two the Worker expects a person to be able to act on, so
+      // they get its wording; everything else falls back to "email us instead".
+      let message = GENERIC_ERROR;
+      if (res.status === 403 || res.status === 429) {
+        try {
+          const body = await res.json();
+          if (body && body.error) message = body.error;
+        } catch (err) { /* keep the generic message */ }
+      }
+      fail(message);
     });
   })();
 

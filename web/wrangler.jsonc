@@ -1,13 +1,33 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mountain-pine-media",
+  "main": "worker.js",
   "compatibility_date": "2026-08-29",
   "observability": {
     "enabled": true
   },
+  // Everything served publicly lives in ./public. The Worker sits outside it on
+  // purpose, so worker.js is never itself servable. ASSETS is how the Worker hands
+  // back static files for any request it doesn't handle.
   "assets": {
-    "directory": "."
+    "directory": "./public",
+    "binding": "ASSETS"
   },
+  // Per-IP burst limiter in front of /api/inquiry. `period` only accepts 10 or 60, so
+  // this is deliberately a flood stop rather than a daily cap — a real daily quota
+  // would need KV or a Durable Object, which this endpoint's volume doesn't justify.
+  // Counters are shared by namespace_id across the account, so keep this one unique:
+  // Lake & Pine's review limiter already uses 1001.
+  "ratelimits": [
+    {
+      "name": "INQUIRY_LIMITER",
+      "namespace_id": "1002",
+      "simple": {
+        "limit": 5,
+        "period": 60
+      }
+    }
+  ],
   "compatibility_flags": [
     "nodejs_compat"
   ]

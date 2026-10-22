@@ -649,8 +649,29 @@ section{padding:110px 0;}
   font-size:13.5px; letter-spacing:0.03em; border-radius:2px; cursor:pointer; transition:opacity .2s;
 }
 .form button:hover{opacity:0.85;}
-.form-note{font-size:12.5px; color:var(--sage); line-height:1.5;}
-.form-note.is-active{color:var(--brass);}
+.form button:disabled{opacity:0.55; cursor:default;}
+/* display:flex beats the user-agent's [hidden]{display:none}, so without this the
+   filled-in form stays on screen behind the thanks message. */
+.form[hidden]{display:none;}
+/* Turnstile draws its own fixed-height iframe; this only reserves the space, so the
+   button doesn't jump down when the widget arrives. */
+.form-turnstile{min-height:65px;}
+.form-status{font-size:13.5px; line-height:1.5;}
+.form-status:empty{display:none;}
+.form-status.is-pending{color:var(--sage);}
+/* Not a palette colour: a warm coral that reads as an error, not as the brass accent.
+   6.6:1 against --lake-deep. */
+.form-status.is-error{color:#E39A87;}
+/* Off-screen rather than display:none — see the note on the field in index.html. */
+.hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;}
+.contact .form-noscript{
+  margin-top:0; max-width:none; color:var(--stone);
+  border-left:2px solid var(--brass); padding:4px 0 4px 20px;
+}
+.form-noscript a{color:var(--alpine-white); border-bottom:1px solid var(--line);}
+.form-thanks:focus{outline:none;}
+.form-thanks h3{font-size:clamp(24px,2.6vw,30px); line-height:1.2;}
+.form-thanks a{color:var(--alpine-white); border-bottom:1px solid var(--line); white-space:nowrap;}
 
 footer{background:var(--lake-deep); border-top:1px solid var(--line); padding:34px 0;}
 .footer-inner{display:flex; justify-content:space-between; align-items:center; color:var(--sage); font-size:12.5px; flex-wrap:wrap; gap:14px;}
