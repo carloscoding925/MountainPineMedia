@@ -524,3 +524,46 @@ Alongside those:
 Note that the biggest remaining wins for search visibility are off-site: a Google Business Profile and Search Console verification.
 
 The domain `mountain-pine-media.com` is hardcoded in six places — the `<head>` meta block and JSON-LD in `index.html`, `robots.txt`, `sitemap.xml`, the default sender in `worker.js`, and the footer line in `email.js`. Change them together if it ever moves, and add the new hostname to the Turnstile widget and to Resend as well.
+
+## Accessibility
+
+The target is **WCAG 2.1 Level AA**, the same as Lake & Pine and for the same reason: it's the standard ADA website complaints are measured against, and the firms that file them find targets with automated checkers.
+
+The first WAVE run (November 2026) reported 9 errors — 4 missing alternative text, 5 missing form labels — and 20 contrast errors. The changes below clear all 29.
+
+### Brass text on the light grounds: `--brass-text`
+
+`--brass` (`#B8863B`) is 2.99:1 on `--alpine-white` and 2.71:1 on the `#E4EDEC` sections, against the 4.5:1 AA requires. It caused 18 of the 20 contrast errors: the light-section eyebrows, the service numbers, the film captions, the Why Mountain Pine dashes, and the tier labels on the two light price cards. **Brass text on a light ground uses `--brass-text` (`#87622B`)**: 5.11:1 and 4.62:1. It's the same hue, darkened only as far as the ratio needs.
+
+It doesn't work in reverse: `--brass-text` is 2.71:1 on `--lake-deep`, where plain `--brass` already passes at 4.62. So `.section-eyebrow` defaults to `--brass-text`, and `.portfolio`, `.contact` and `.price-card.feat` set `--brass` back. A new dark section needs the same override.
+
+`--brass` stays for everything that isn't text on a light ground: buttons, borders, the film dots, and all brass on `--lake-deep`. The photo sections keep their own lifted tokens (see [Brass and sage had to move](#brass-and-sage-had-to-move)).
+
+### `--lake-mid` moved slightly
+
+The other two contrast errors were the intro paragraphs in Cinematography and Pricing: `--lake-mid` (`#3E7488`) on `#E4EDEC` was 4.34:1. The token is now `#3B6F82`, the same hue a little darker: 4.66:1 there and 5.15:1 on `--alpine-white`. It's only ever used for text, so the change touches nothing else. `email.js` keeps the old value; the email is on white, where it passes.
+
+### Graphics
+
+- **Decorative SVGs carry `aria-hidden="true"`**: the nav mark (it sits beside the words "Mountain Pine Media", so a label would only make a screen reader say the name twice), the hero's contour linework, and the scroll cue's arrow. Inline SVGs with neither `aria-hidden` nor a name are what WAVE reports as missing alt text.
+- **The service-area map is a real image**, so it gets `role="img"` and an `aria-label` instead. `role="img"` also stops a screen reader reading its six `<text>` labels one by one right after the chips.
+- The portfolio photos already had descriptive `alt` text.
+
+### Form labels
+
+Each inquiry field now has a `<label for>`, hidden visually with `.visually-hidden`, and the placeholders stay as the visible prompt. That gives the form exactly the same pixels as before. A placeholder alone doesn't count as a label: it isn't reliably announced, and it disappears once someone starts typing.
+
+- **Hidden labels still need a passing colour.** WAVE measures text hidden with the clip pattern as if it were visible. These inherit `--alpine-white` from `.contact`.
+- **`.visually-hidden` is absolutely positioned**, so the labels add nothing to `.form`'s flex gap. The form measures 523×497 at 1440px and 350×497 at 390px, the same as before.
+- **`autocomplete` is set on name, brokerage and email** (`name`, `organization`, `email`), which WCAG 1.3.5 asks for. The listing field gets none, because that's the property's address, not the agent's.
+
+### Things that would quietly break it
+
+- **`.reveal` goes on a wrapper, never on the element that holds the text.** WAVE measures before anything scrolls into view, so text sitting directly in a `.reveal` reads at `opacity: 0` and is reported as 1:1. Every `.reveal` here is already a wrapper. Lake & Pine got caught by this.
+- **Any new brass or `--lake-mid` text needs its ratio checked against the ground it actually sits on.** Both tokens pass on some grounds and fail on others.
+
+### Checking
+
+- **WAVE** ([wave.webaim.org](https://wave.webaim.org)) only checks a public URL, so it can't see a branch until it's deployed. It also skips text over gradients and translucent backgrounds, which here is the nav, the gallery tags and the service-area chips.
+- **axe-core** catches things WAVE doesn't, such as target size, and it runs on `localhost`. Use the axe DevTools extension, or inject `axe.min.js` into the page with Puppeteer.
+- **Automated tools catch only part of WCAG.** Also tab through the page with the keyboard alone, listen with VoiceOver (Cmd+F5), and zoom to 200%.
