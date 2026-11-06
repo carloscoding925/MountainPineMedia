@@ -1,9 +1,17 @@
 :root{
   --lake-deep:#14293A;
-  --lake-mid:#3E7488;
+  /* Was #3E7488, which is 4.34:1 on the #E4EDEC sections (Cinematography, Pricing),
+     just under AA's 4.5:1. Nudged darker on the same hue: 4.66 there, 5.15 on
+     --alpine-white. Text-only token, so nothing else moves. */
+  --lake-mid:#3B6F82;
   --alpine-white:#F4F7F7;
   --stone:#D8E1E0;
   --brass:#B8863B;
+  /* Brass for text on the light grounds. --brass is 2.99:1 on --alpine-white and
+     2.71:1 on #E4EDEC, well short of AA; this is the same hue taken only as dark as
+     the ratio needs (5.11 / 4.62). --brass stays for buttons, borders, dots, and all
+     brass on --lake-deep, where it already passes at 4.62 — this one would fail there. */
+  --brass-text:#87622B;
   --ink:#16232A;
   --sage:#7F9AA3;
   --line: rgba(246,244,238,0.16);
@@ -202,8 +210,12 @@ section{padding:110px 0;}
 .section-head{max-width:640px; margin-bottom:64px;}
 .section-eyebrow{
   font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.1em; text-transform:uppercase;
-  color:var(--brass); margin-bottom:16px;
+  color:var(--brass-text); margin-bottom:16px;
 }
+/* The dark sections keep base brass. --brass-text is tuned for the light grounds and
+   is only 2.71:1 on --lake-deep. .area sets its own lifted colour further down. */
+.portfolio .section-eyebrow,
+.contact .section-eyebrow{color:var(--brass);}
 .section-head h2{font-size:clamp(30px,3.6vw,42px); font-weight:600; line-height:1.12;}
 .section-head p{margin-top:18px; color:var(--lake-mid); font-size:16px; max-width:520px;}
 .divider{height:1px; background:linear-gradient(90deg, transparent, var(--stone) 20%, var(--stone) 80%, transparent);}
@@ -260,7 +272,7 @@ section{padding:110px 0;}
   .svc-card:nth-child(n+4){border-top:0;}
 }
 .svc-card:hover{background:#FBFAF6;}
-.svc-num{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--brass);}
+.svc-num{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--brass-text);}
 .svc-card h3{font-size:20px; margin-top:26px; font-weight:600;}
 .svc-card p{font-size:14px; color:var(--lake-mid); margin-top:10px; line-height:1.55;}
 
@@ -374,7 +386,7 @@ section{padding:110px 0;}
 }
 .cine-slide.is-active .cine-meta{opacity:1;}
 .cine-name{font-family:'Fraunces',serif; font-size:18px; font-weight:600; color:var(--ink);}
-.cine-detail{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--brass);}
+.cine-detail{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--brass-text);}
 .cine-arrow{
   position:absolute; top:44%; transform:translateY(-50%);
   width:44px; height:44px; border-radius:50%;
@@ -502,7 +514,7 @@ section{padding:110px 0;}
 .why-list{display:flex; flex-direction:column; gap:0;}
 .why-item{display:flex; gap:22px; padding:26px 0; border-top:1px solid var(--stone);}
 .why-item:last-child{border-bottom:1px solid var(--stone);}
-.why-item .mk{font-family:'IBM Plex Mono',monospace; color:var(--brass); font-size:13px; min-width:28px; padding-top:3px;}
+.why-item .mk{font-family:'IBM Plex Mono',monospace; color:var(--brass-text); font-size:13px; min-width:28px; padding-top:3px;}
 .why-item h4{font-size:17px; font-weight:600;}
 .why-item p{font-size:14.5px; color:var(--lake-mid); margin-top:6px;}
 .stat-block{background:var(--lake-deep); color:var(--alpine-white); padding:44px 36px; border-radius:2px;}
@@ -519,7 +531,8 @@ section{padding:110px 0;}
   display:flex; flex-direction:column;
 }
 .price-card.feat{background:var(--lake-deep); color:var(--alpine-white); border-color:var(--lake-deep);}
-.price-card .tier-mk{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--brass);}
+.price-card .tier-mk{font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--brass-text);}
+.price-card.feat .tier-mk{color:var(--brass);}
 .price-card h3{font-size:26px; margin-top:14px;}
 .price-card .desc{font-size:13.5px; color:var(--lake-mid); margin-top:8px; min-height:41px;}
 .price-card.feat .desc{color:var(--sage);}
@@ -662,6 +675,15 @@ section{padding:110px 0;}
 /* Not a palette colour: a warm coral that reads as an error, not as the brass accent.
    6.6:1 against --lake-deep. */
 .form-status.is-error{color:#E39A87;}
+/* Screen-reader-only text: the form's field labels. The placeholders are the visible
+   prompt, but a placeholder isn't a label: it isn't reliably announced and it vanishes
+   once someone types. Absolutely positioned, so it takes no part in .form's flex gap.
+   WAVE still measures text hidden this way, so it must keep a passing colour; here it
+   inherits --alpine-white from .contact. */
+.visually-hidden{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0;
+}
 /* Off-screen rather than display:none — see the note on the field in index.html. */
 .hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;}
 .contact .form-noscript{

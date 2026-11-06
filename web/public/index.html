@@ -111,7 +111,7 @@
 <header>
   <nav class="wrap">
     <div class="brand">
-      <svg viewBox="0 0 26 26" fill="none"><path d="M2 18L8 8L12 14L16 6L24 18" stroke="#B8863B" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M2 18L8 8L12 14L16 6L24 18" stroke="#B8863B" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>
       <span class="brand-text">MOUNTAIN <span>PINE</span> MEDIA</span>
     </div>
     <div class="nav-menu" id="nav-menu">
@@ -132,7 +132,7 @@
 </header>
 
 <section class="hero" data-parallax>
-  <svg class="contour-field" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+  <svg class="contour-field" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <g stroke="#F4F7F7" stroke-width="1" fill="none">
       <path opacity="0.12" d="M-50 620 Q 200 560 350 600 T 700 560 T 1050 610 T 1300 580"/>
       <path opacity="0.16" d="M-50 660 Q 220 590 380 640 T 720 600 T 1080 650 T 1300 620"/>
@@ -159,7 +159,7 @@
     </div>
     <div class="scroll-cue" aria-hidden="true">
       <span class="scroll-cue-text">Scroll Down for More</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12 4v13"/><path d="M6 12l6 6 6-6"/>
       </svg>
     </div>
@@ -447,7 +447,10 @@
         <!-- No background rect: the photo and its scrim are the parent's background,
              and an opaque fill here would hide both. Dots and labels are the
              light-on-dark set for that reason. -->
-        <svg viewBox="0 0 400 400">
+        <!-- A real image, not decoration, so it gets a name rather than aria-hidden.
+             role="img" also stops a screen reader reading the six <text> labels one by
+             one after it has just read the chips. -->
+        <svg viewBox="0 0 400 400" role="img" aria-label="Map of the service area: Truckee, Incline Village and Tahoe around the lake to the west, with Reno, Sparks and Carson City to the east">
           <g stroke="#F4F7F7" stroke-width="1" fill="none" opacity="0.28">
             <path d="M0 100 Q 130 130 220 90 T 400 110"/>
             <path d="M0 160 Q 140 190 230 150 T 400 170"/>
@@ -510,11 +513,19 @@
         <label for="website">Website</label>
         <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
       </div>
-      <input type="text" name="name" placeholder="Name" required>
-      <input type="text" name="brokerage" placeholder="Brokerage">
-      <input type="email" name="email" placeholder="Email" required>
-      <input type="text" name="listing" placeholder="Listing address + target date">
-      <textarea name="notes" placeholder="Anything else we should know?"></textarea>
+      <!-- Each field has a real <label>, visually hidden; the placeholder stays as the
+           visible prompt. autocomplete lets browsers fill the agent's own details.
+           Listing gets none on purpose: it's the property's address, not theirs. -->
+      <label class="visually-hidden" for="inq-name">Name</label>
+      <input type="text" id="inq-name" name="name" placeholder="Name" autocomplete="name" required>
+      <label class="visually-hidden" for="inq-brokerage">Brokerage</label>
+      <input type="text" id="inq-brokerage" name="brokerage" placeholder="Brokerage" autocomplete="organization">
+      <label class="visually-hidden" for="inq-email">Email</label>
+      <input type="email" id="inq-email" name="email" placeholder="Email" autocomplete="email" required>
+      <label class="visually-hidden" for="inq-listing">Listing address and target date</label>
+      <input type="text" id="inq-listing" name="listing" placeholder="Listing address + target date">
+      <label class="visually-hidden" for="inq-notes">Notes</label>
+      <textarea id="inq-notes" name="notes" placeholder="Anything else we should know?"></textarea>
       <!-- Cloudflare Turnstile, rendered by the script below once the form is near the
            viewport. data-action must stay in step with TURNSTILE_ACTION in worker.js —
            the Worker pins it at verify time, so changing one alone rejects every submission.
